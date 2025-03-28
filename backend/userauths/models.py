@@ -37,9 +37,9 @@ class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     first_name = models.CharField(max_length=100, null=True, blank=True)
     last_name = models.CharField(max_length=100, null=True, blank=True)
-    image = models.ImageField(upload_to="user_profiles/", default="default-user.jpg", null=True, blank=True)
-    country = models.CharField(max_length=100, null=True, blank=True)
-    about = models.TextField(null=True, blank=True)
+    # image = models.ImageField(upload_to="user_profiles/", default="default-user.jpg", null=True, blank=True)
+    # country = models.CharField(max_length=100, null=True, blank=True)
+    # about = models.TextField(null=True, blank=True)
     date_created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):

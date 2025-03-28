@@ -1,8 +1,12 @@
 import { useAuthStore } from "../store/auth";
 import axios from "./axios";
+// import jwt_decode from "jwt-decode";  // Changed import method
+// import Cookie from "js-cookie";     // Changed import and name
+// import Swal from "sweetalert2";      // Capitalized for convention
+
 import jwt_decode from "jwt-decode";
-import Cookie from "js-Cookie";
-import swal from "sweetalert2";
+import Cookie from "js-cookie";
+import Swal from "sweetalert2";
 
 export const login = async (email, password) => {
     try {
@@ -16,7 +20,7 @@ export const login = async (email, password) => {
         //     Cookie.set("access_token", data.access);
             //     Cookie.set("refresh_token", data.refresh);
             setAuthUser(data.access, data.refresh);
-            swal.fire({
+            Swal.fire({
                 title: "Success",
                 text: "Login successful!",
                 icon: "success",
@@ -33,37 +37,46 @@ export const login = async (email, password) => {
     }
 };
 
-export const register = async (first_name, last_name, image, country, about, email, password, confirm_password) => {
+export const register = async (first_name, last_name, email, password, confirm_password) => {
     try {
 
         if (password !== confirm_password) {
             return { data: null, error: "Passwords do not match!" };
         }
         
-        const { data } = await axios.post(`/api/register`, {
+        const { data } = await axios.post(`/user/register/`, {
             first_name,
             last_name,
-            image,
-            country,
-            about,
             email,
             password,
             confirm_password
         });
 
         await login(email, password);
-        swal.fire({
+        Swal.fire({
             title: "Success",
             text: "Registration successful!",
             icon: "success",
         });
-        return { data, error: null }
+      return {
+        data: null,
+        alert:("Registration failed")
+        // error: error.response.data?.detail || "somethings is wrong",          
+      }
         
     } catch (error) {
-        return {
-            data: null,
-            error: error.response.data?.message ||  "Something went wrong, please try again."
-        };
+      // alert(error.response.data.email)
+      // alert(error.response.data.first_name)
+      // alert(error.response.data.last_name)
+      // alert(error.response.data.password)
+      // alert(error.response.data.confirm_password)
+      return {
+        data: null,
+        // error: error.response?.data 
+        //   ? Object.values(error.response.data).flat().join(" | ") 
+        //   : "Something went wrong, please try again."
+        error: `${error.response.data.email}` || "Registration failed"
+      };
     }
 };
 
@@ -99,7 +112,7 @@ export const setUser = async () => {
   const refresh_token = Cookie.get("refresh_token");
 
   if (!access_token || !refresh_token) {
-    alert("Tokens do not exist. User might be logged out.");
+    // alert("Tokens do not exist. User might be logged out.");
     return;
   }
 
