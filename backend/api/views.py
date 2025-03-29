@@ -96,12 +96,13 @@ class PasswordChangeView(generics.CreateAPIView):
         except User.DoesNotExist:
             return Response({"message": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
 
-        if secrets.compare_digest(str(user.otp), str(otp)):  # Ensure both are strings
+        if secrets.compare_digest(str(user.otp), str(otp)):  
             user.set_password(new_password)
-            user.otp = None  # Clear OTP after use
-            user.save(update_fields=["password", "otp"])
+            user.otp = None  
+            user.last_password_reset = now()  
+            user.save(update_fields=["password", "otp", "last_password_reset"]) 
 
-            logger.info(f"Password changed for user {user.id} at {now()}")
+            logger.info(f"Password changed for user {user.id} at {user.last_password_reset}")
             return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
 
         return Response({"message": "Invalid OTP or user not found"}, status=status.HTTP_400_BAD_REQUEST)
