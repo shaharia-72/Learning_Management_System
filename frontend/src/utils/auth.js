@@ -111,12 +111,14 @@ export const register = async (first_name, last_name, email, password, confirm_p
 
 
 export const logout = () => {
-    Cookie.remove("access-token");
-    Cookie.remove("refresh-token");
-
-    useAuthStore.getState().setUser(null);
-
-    alert("Logout successful!");
+    Cookie.remove("access_token");
+    Cookie.remove("refresh_token");
+  useAuthStore.getState().setUser(null);
+  Swal.fire({
+    title: 'Logged Out',
+    text: 'You have successfully logged out',
+    icon: 'success',
+  });
 }
 
 // export const setUser = async () => {

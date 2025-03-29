@@ -29,6 +29,7 @@
     "react-player": "^2.16.0",
     "react-rater": "^6.0.5",
     "react-router-dom": "^7.4.0",
+    "react-toastify": "^11.0.5",
     "sweetalert2": "^11.17.2",
     "yet-another-react-lightbox": "^3.21.8",
     "zustand": "4"

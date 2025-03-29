@@ -2,30 +2,34 @@ import { useState, useEffect } from "react";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import { Link } from "react-router-dom";
-import apiInstance from "../../utils/axios";
+import  apiInstance  from "../../utils/axios"
+// import { toast } from "react-toastify";
+import { toast, ToastContainer } from "react-toastify";
+
 function ForgotPassword() {
   const [email, setEmail] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleEmailSubmit = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    try {
-      await apiInstance.get(`user/password-reset/${email}/`).then((res) => {
-        console.log(res.data);
-        setIsLoading(false);
-        alert("Password Reset Email Sent");
-      });
-    } catch (error) {
-      console.log("error: ", error);
-      setIsLoading(false);
-    }
-  };
+const handleEmailSubmit = async (e) => {
+  e.preventDefault();
+  setIsLoading(true);
+
+  try {
+    await apiInstance.get(`/user/password-reset/${email}/`);
+    toast.success("Password reset link has been sent to your email"); 
+  } catch{
+    toast.error("Failed to send password reset link");
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+  
 
   return (
     <>
       <BaseHeader />
-
+      <ToastContainer />
       <section
         className="container d-flex flex-column vh-100"
         style={{ marginTop: "150px" }}
