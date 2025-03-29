@@ -81,23 +81,27 @@ class PasswordResetView(generics.RetrieveAPIView):
 class PasswordChangeView(generics.CreateAPIView):
     permission_classes = [AllowAny]
     serializer_class = api_serializer.UserSerializer
-    
+
     def create(self, request, *args, **kwargs):
-        uuidb64 = request.data.get("uuidb64")
-        otp = request.data.get("otp")
         new_password = request.data.get("password")
-        
+        otp = request.data.get("otp")
+        uuidb64 = request.data.get("uuidb64")
+
         if not all([uuidb64, otp, new_password]):
             return Response({"message": "Missing required fields"}, status=status.HTTP_400_BAD_REQUEST)
-        
-        if User and User.otp and secrets.compare_digest(str(User.otp), str(otp)):
-            User.set_password(new_password)
-            User.otp = None  
-            User.last_password_reset = now()  
-            User.save()
 
-            logger.info(f"Password changed for user {User.id} at {now()}")
+        try:
+            user = User.objects.get(pk=uuidb64)
+            print(f"User Found - ID: {user.id}, OTP: {user.otp}")
+        except User.DoesNotExist:
+            return Response({"message": "User not found"}, status=status.HTTP_400_BAD_REQUEST)
 
+        if secrets.compare_digest(str(user.otp), str(otp)):  # Ensure both are strings
+            user.set_password(new_password)
+            user.otp = None  # Clear OTP after use
+            user.save(update_fields=["password", "otp"])
+
+            logger.info(f"Password changed for user {user.id} at {now()}")
             return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
 
         return Response({"message": "Invalid OTP or user not found"}, status=status.HTTP_400_BAD_REQUEST)

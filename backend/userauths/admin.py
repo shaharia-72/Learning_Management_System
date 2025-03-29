@@ -19,6 +19,7 @@ class CustomUserAdmin(UserAdmin):
     fieldsets = (
         (None, {"fields": ("email", "password")}),
         ("Personal Info", {"fields": ("user_unique_id", "username","first_name", "last_name")}),
+        ("Auth Info", {"fields": ("otp", "refresh_token","last_password_reset")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important Dates", {"fields": ("last_login", "date_joined")}),
     )
