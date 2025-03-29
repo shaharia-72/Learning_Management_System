@@ -1,4 +1,5 @@
 // import React from "react";
+import Swal from "sweetalert2";
 import { useState, useEffect } from "react";
 import { Link, useNavigate} from "react-router-dom";
 
@@ -30,7 +31,12 @@ function Register() {
     const {error} = await register(first_name, last_name, email, password, confirm_password)
     if (error)
     {
-      alert(error);
+      // alert(error);
+      Swal.fire({
+        title: "Error",
+        text: error,
+        icon: "error",
+      });
       setIsLoading(false);
     }
     else {
@@ -123,11 +129,25 @@ function Register() {
                     />
                   </div>
 
-                  <button type="submit" className="btn btn-primary">
+                  <div>
+                    <div className="d-grid">
+                      {isLoading === true && (
+                        <button
+                          disabled
+                          type="submit"
+                          className="btn btn-primary"
+                        >
+                          Processing <i className="fas fa-spinner fa-spin"></i>
+                        </button>
+                      )}
+
+                      {isLoading === false && (
+                        <button type="submit" className="btn btn-primary">
                           Sign Up <i className="fas fa-user-plus"></i>
                         </button>
-
-                  
+                      )}
+                    </div>
+                  </div>
                 </form>
               </div>
             </div>

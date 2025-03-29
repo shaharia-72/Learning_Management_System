@@ -5,6 +5,7 @@ import PrivateRoute from "./layouts/PrivateRoute"
 
 import Register from "../src/views/auth/Register"
 import Logout from "../src/views/auth/Logout"
+import Login from "../src/views/auth/Login"
 
 function App() {
   return (
@@ -14,6 +15,7 @@ function App() {
           <Route>
             <Route path="/register/" element={<Register/>}/>
             <Route path="/logout/" element={<Logout/>}/>
+            <Route path="/login/" element={<Login/>}/>
           </Route>
         </Routes>
       </MainWrapper>

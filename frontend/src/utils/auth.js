@@ -15,10 +15,6 @@ export const login = async (email, password) => {
             password,
         });
         if(status === 200) {
-        //     const decoded = jwt_decode(data.access);
-        //     useAuthStore.getState().setUser(decoded);
-        //     Cookie.set("access_token", data.access);
-            //     Cookie.set("refresh_token", data.refresh);
             setAuthUser(data.access, data.refresh);
             Swal.fire({
                 title: "Success",
@@ -109,12 +105,6 @@ export const register = async (first_name, last_name, email, password, confirm_p
                         "Registration failed. Please try again.";
 
     // Show error message
-    Swal.fire({
-      title: "Error",
-      text: errorMessage,
-      icon: "error",
-    });
-
     return { error: errorMessage };
   }
 };
