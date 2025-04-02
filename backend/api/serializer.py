@@ -13,9 +13,6 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token['email'] = user.email
         return token
 
-
-
-
 class UserSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -75,45 +72,49 @@ class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = api_models.Category
         fields = '__all__'
-class CourseSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = api_models.Course
-        fields = '__all__'
-class VariantSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = api_models.Variant
-        fields = '__all__'
+        
 class VariantItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = api_models.VariantItem
         fields = '__all__'
-class Question_AnswerSerializer(serializers.ModelSerializer):
-    
+
+class VariantSerializer(serializers.ModelSerializer):
+    variant_items = VariantItemSerializer(many = True)
+    items = VariantItemSerializer(many = True)
     class Meta:
-        model = api_models.Question_Answer
+        model = api_models.Variant
         fields = '__all__'
+        
 class Question_Answer_MessageSerializer(serializers.ModelSerializer):
-    
+    profile = ProfileSerializer(many = False)
     class Meta:
         model = api_models.Question_Answer_Message
         fields = '__all__'
+
+class Question_AnswerSerializer(serializers.ModelSerializer):
+    messages = Question_Answer_MessageSerializer(many = True)
+    profile = ProfileSerializer(many = False)
+    class Meta:
+        model = api_models.Question_Answer
+        fields = '__all__'
+        
 class CartSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = api_models.Cart
         fields = '__all__'
-class CartOrderSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = api_models.CartOrder
-        fields = '__all__'
+
 class CartOrderItemSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = api_models.CartOrderItem
+        fields = '__all__'
+
+class CartOrderSerializer(serializers.ModelSerializer):
+    order_items = CartOrderItemSerializer(many = True)
+    class Meta:
+        model = api_models.CartOrder
         fields = '__all__'
 class CertificateSerializer(serializers.ModelSerializer):
     
@@ -124,11 +125,6 @@ class CompletedLessonSerializer(serializers.ModelSerializer):
     
     class Meta:
         model = api_models.CompletedLesson
-        fields = '__all__'
-class EnrolledCourseSerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model = api_models.EnrolledCourse
         fields = '__all__'
 class NoteSerializer(serializers.ModelSerializer):
     
@@ -161,4 +157,22 @@ class CountrySerializer(serializers.ModelSerializer):
         model = api_models.Country
         fields = '__all__'
 
-        
+class EnrolledCourseSerializer(serializers.ModelSerializer):
+    lectures = VariantItemSerializer(many = True, read_only = True)
+    completed_lesson = CompletedLessonSerializer(many=True, read_only=True)
+    curriculum = VariantItemSerializer(many = True, read_only = True)
+    note = NoteSerializer(many = True, read_only = True)
+    question_answer = Question_AnswerSerializer(many = True, read_only = True)
+    review = ReviewSerializer(many = True, read_only = True)
+    class Meta:
+        model = api_models.EnrolledCourse
+        fields = [ "course", "user", "teacher", "order_item", "enrollment_id", "date", "lectures", "completed_lesson", "curriculum", "note", "question_answer", "review",]
+
+class CourseSerializer(serializers.ModelSerializer):
+    students = EnrolledCourseSerializer(many = True, required = False, read_only = True)
+    curriculum = VariantItemSerializer(many = True, required = False, read_only = True)
+    lectures = VariantItemSerializer(many = True, required = False, read_only = True)
+    reviews = ReviewSerializer(many = True, required = False, read_only = True)
+    class Meta:
+        model = api_models.Course
+        fields = [ "id","category","teacher","title","description","file","image","price","language","level","platform_status","teacher_course_status","featured","rating","created_at","updated_at","slug","course_id",]
