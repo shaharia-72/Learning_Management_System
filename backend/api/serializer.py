@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from userauths.models import User, Profile
 from django.contrib.auth.password_validation import validate_password
-
+from api import models as api_models
 
 
 class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
@@ -63,4 +63,102 @@ class RegisterSerializer(serializers.ModelSerializer):
         )
         
         return user
+
+class TeacherSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Teacher
+        fields = '__all__'
+
+class CategorySerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Category
+        fields = '__all__'
+class CourseSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Course
+        fields = '__all__'
+class VariantSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Variant
+        fields = '__all__'
+class VariantItemSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.VariantItem
+        fields = '__all__'
+class Question_AnswerSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Question_Answer
+        fields = '__all__'
+class Question_Answer_MessageSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Question_Answer_Message
+        fields = '__all__'
+class CartSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Cart
+        fields = '__all__'
+class CartOrderSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.CartOrder
+        fields = '__all__'
+class CartOrderItemSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.CartOrderItem
+        fields = '__all__'
+class CertificateSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Certificate
+        fields = '__all__'
+class CompletedLessonSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.CompletedLesson
+        fields = '__all__'
+class EnrolledCourseSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.EnrolledCourse
+        fields = '__all__'
+class NoteSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Note
+        fields = '__all__'
+class ReviewSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Review
+        fields = '__all__'
+class NotificationSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Notification
+        fields = '__all__'
+class CouponSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Coupon
+        fields = '__all__'
+class WishlistSerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Wishlist
+        fields = '__all__'
+class CountrySerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = api_models.Country
+        fields = '__all__'
+
         
