@@ -68,10 +68,9 @@ class TeacherSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class CategorySerializer(serializers.ModelSerializer):
-    
     class Meta:
         model = api_models.Category
-        fields = '__all__'
+        fields = fields = ['id', 'title', 'image', 'slug', 'course_count', 'descriptions']
         
 class VariantItemSerializer(serializers.ModelSerializer):
     
@@ -175,4 +174,4 @@ class CourseSerializer(serializers.ModelSerializer):
     reviews = ReviewSerializer(many = True, required = False, read_only = True)
     class Meta:
         model = api_models.Course
-        fields = [ "id","category","teacher","title","description","file","image","price","language","level","platform_status","teacher_course_status","featured","rating","created_at","updated_at","slug","course_id",]
+        fields = [ "id","category","teacher","title","description","file","image","price","language","level","platform_status","teacher_course_status","featured","rating","created_at","updated_at","slug","course_id","students","curriculum","lectures","reviews",]

@@ -1,3 +1,4 @@
+from decimal import Decimal
 import logging
 import secrets
 from django.shortcuts import render, redirect, get_object_or_404
@@ -106,3 +107,131 @@ class PasswordChangeView(generics.CreateAPIView):
             return Response({"message": "Password changed successfully"}, status=status.HTTP_200_OK)
 
         return Response({"message": "Invalid OTP or user not found"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class CourseCategoryView(generics.ListAPIView):
+    queryset = api_models.Category.objects.filter(active=True)
+    serializer_class = api_serializer.CategorySerializer
+    permission_classes = [AllowAny]
+    
+class CourseListView(generics.ListAPIView):
+    queryset  = api_models.Course.objects.filter(platform_status="Published", teacher_course_status="Published")
+    serializer_class = api_serializer.CourseSerializer
+    permission_classes = [AllowAny]
+
+class CourseDetailView(generics.RetrieveAPIView):
+    serializer_class = api_serializer.CourseSerializer
+    permission_classes = [AllowAny]
+    queryset = api_models.Course.objects.filter(platform_status="Published", teacher_course_status="Published")
+    
+    def get_object(self):
+        slug = self.kwargs["slug"]
+        course = api_models.Course.objects.get(slug=slug, platform_status="Published", teacher_course_status="Published")
+        return course
+        
+        
+class CourseCartView(generics.CreateAPIView):
+    queryset = api_models.Cart.objects.all()
+    serializer_class = api_serializer.CartSerializer
+    permission_classes = [AllowAny]
+    
+    def create(self, request, *args, **kwargs):
+        course_id = request.data['course_id']
+        user_id = request.data['user_id']
+        cart_id = request.data['cart_id']
+        price = request.data['price']
+        country_name = request.data['country_name']
+        
+        course = api_models.Course.objects.filter(id=course_id).first()
+        
+        if user_id != 'undefined':
+            user = api_models.User.objects.filter(id=user_id).first()
+        else:
+            user = None
+            
+        try:
+            country_object = api_models.Country.objects.filter(name=country_name).first()
+            country = country_object.name
+        except:
+            country_object = None
+            country = 'Bangladesh'
+            
+        if country_object and not None:
+            tax_rate = country_object.tax_rate / 100
+        else:
+            tax_rate = 5 / 100
+        
+        cart = api_models.Cart.objects.filter(cart_id = cart_id, course_id = course_id).first()
+        
+        if cart:
+            cart.course = course
+            cart.user = user
+            cart.price = price
+            cart.tax_fee = Decimal(price) * Decimal(tax_rate)
+            cart.country = country
+            cart.cart_id = cart_id
+            cart.total = Decimal(cart.price) + Decimal(cart.tax_fee)
+            cart.save()
+
+            return Response({"message": "Cart Updated Successfully"}, status=status.HTTP_200_OK)
+
+        else:
+            cart = api_models.Cart()
+
+            cart.course = course
+            cart.user = user
+            cart.price = price
+            cart.tax_fee = Decimal(price) * Decimal(tax_rate)
+            cart.country = country
+            cart.cart_id = cart_id
+            cart.total = Decimal(cart.price) + Decimal(cart.tax_fee)
+            cart.save()
+
+            return Response({"message": "Cart Created Successfully"}, status=status.HTTP_201_CREATED)
+
+class CourseCartListView(generics.ListAPIView):
+    serializer_class = api_serializer.CartSerializer
+    permission_classes = [AllowAny]
+    
+    def get_queryset(self):
+        card_id = self.kwargs['cart_id']
+        return api_models.Cart.objects.filter(cart_id = card_id)
+    
+class CourseCartListDeleteView(generics.DestroyAPIView):
+    serializer_class = api_serializer.CartSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        cart_id = self.kwargs['cart_id']
+        item_id = self.kwargs['item_id']
+        
+        return get_object_or_404(api_models.Cart,cart_id = cart_id, id = item_id)
+    
+class CourseCartStatisticsView(generics.RetrieveAPIView):
+    serializer_class = api_serializer.CartSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'cart_id'
+    
+    def get_queryset(self):
+        cart_id = self.kwargs['cart_id']
+        queryset = api_models.Cart.objects.filter(cart_id = cart_id)
+        return queryset
+    
+    def get(self, request, *args, **kwargs):
+        
+        total_price = 0
+        total_tax_fee = 0
+        total = 0
+        cart_id = self.kwargs['cart_id']
+        
+        queryset = api_models.Cart.objects.filter(cart_id = cart_id)
+        
+        for cart in queryset:
+            total_price +=float(cart.price)
+            total_tax_fee += cart.tax_fee
+            total += cart.total
+            
+        return Response({"total_price": total_price, "total_tax_fee": total_tax_fee, "total": total}, status=status.HTTP_200_OK)
+    
+    
+    

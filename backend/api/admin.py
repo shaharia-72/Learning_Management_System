@@ -26,12 +26,13 @@ class TeacherAdmin(BaseAdmin):
             'fields': ('user', 'full_name', 'image', 'country')
         }),
         ('Bio & About', {
-            'fields': ('bio', 'about')
+            'fields': (
+                'bio', 'about')
         }),
         ('Social Media', {
             'fields': ('personal_website', 'facebook', 'twitter', 
                       'instagram', 'linkedIn', 'telegram', 'youtube'),
-            'classes': ('collapse',)
+            # 'classes': ('collapse',)
         }),
     )
 
@@ -66,7 +67,7 @@ class CourseAdmin(BaseAdmin):
     list_display = ('title', 'teacher', 'category', 'price', 'platform_status', 'featured', 'average_rating_display')
     list_filter = ('platform_status', 'teacher_course_status', 'featured', 'category', 'language', 'level')
     search_fields = ('title', 'description', 'teacher__full_name')
-    readonly_fields = ('course_id', 'average_rating_display', 'rating_count', 'created_at', 'updated_at')  # Add to readonly
+    readonly_fields = ('course_id', 'average_rating_display', 'rating_count', 'created_at', 'updated_at')
     filter_horizontal = ()
     prepopulated_fields = {'slug': ('title',)}
     
@@ -85,7 +86,7 @@ class CourseAdmin(BaseAdmin):
         }),
         ('Metadata', {
             'fields': ('course_id', 'slug', 'created_at', 'updated_at'),
-            'classes': ('collapse',)
+            # 'classes': ('collapse',)
         }),
     )
 
@@ -141,9 +142,18 @@ class QuestionAnswerAdmin(BaseAdmin):
 # Cart Admin
 @admin.register(models.Cart)
 class CartAdmin(BaseAdmin):
-    list_display = ('user', 'course', 'price', 'total', 'date')
+    list_display = ('cart_id','user', 'course', 'price', 'total', 'date')
     list_filter = ('date',)
     search_fields = ('user__username', 'course__title')
+    
+    fieldsets = (
+        ('Basic Info',{
+            'fields': ('user', 'course', 'country','price','tax_fee', 'total', 'date',)
+            }),
+            ('Metadata', {
+            'fields': ('cart_id',)
+        }),
+    )
 
 # Order Admin
 class CartOrderItemInline(admin.TabularInline):

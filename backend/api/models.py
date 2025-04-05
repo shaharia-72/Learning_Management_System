@@ -62,8 +62,9 @@ NOTI_TYPE = (
     ("Course Enrollment Completed", "Course Enrollment Completed"),
 )
 
-def generate_course_id():
+def generate_unique_id():
         return f"LMS-{shortuuid.ShortUUID().random(length=8).upper()}"  
+
 class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
     image = models.FileField(upload_to="course_file", blank=True, null=True, default="default.jpg")
@@ -79,6 +80,7 @@ class Teacher(models.Model):
     youtube = models.URLField(blank=True, null=True)
     about = models.TextField(max_length=1000, blank=True, null=True)
     country = models.CharField(max_length=100, blank=True, null=True)
+    teacher_id = models.CharField(max_length=12, unique=True, editable=False, default=generate_unique_id)
     
     
     def save(self, *args, **kwargs):
@@ -99,6 +101,8 @@ class Teacher(models.Model):
     
 class Category(models.Model):
     title = models.CharField(max_length=100)
+    descriptions = models.TextField(blank=True, null=True)
+    active = models.BooleanField(default=True)
     image = models.FileField(upload_to="course_file", blank=True, null=True, default="default.jpg")
     active = models.BooleanField(default=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
@@ -135,14 +139,14 @@ class Course(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     slug = models.SlugField(unique=True, blank=True, null=True)
-    course_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    course_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     def __str__(self):
         return self.title
     
     def save(self, *args, **kwargs):
         if self.slug == "" or self.slug == None:
             self.slug = slugify(self.title) 
-        super(Category, self).save(*args, **kwargs)
+        super(Course, self).save(*args, **kwargs)
         
     def students(self):
         return EnrolledCourse.objects.filter(course=self)
@@ -167,7 +171,7 @@ class Course(models.Model):
 class Variant(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     title = models.CharField(max_length=1000)
-    variant_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    variant_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -188,7 +192,7 @@ class VariantItem(models.Model):
     duration = models.DurationField(null=True, blank=True)
     content_duration = models.CharField(max_length=1000, null=True, blank=True)
     preview = models.BooleanField(default=False)
-    variant_item_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    variant_item_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -214,7 +218,7 @@ class Question_Answer(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField(max_length=1000, null=True, blank=True)
-    qa_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    qa_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -234,8 +238,8 @@ class Question_Answer_Message(models.Model):
     question = models.ForeignKey(Question_Answer, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     message = models.TextField(null=True, blank=True)
-    qam_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
-    qa_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    qam_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
+    qa_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -254,7 +258,7 @@ class Cart(models.Model):
     tax_fee = models.DecimalField(max_digits=12, default=0.00, decimal_places=2)
     total = models.DecimalField(max_digits=12, default=0.00, decimal_places=2)
     country = models.CharField(max_length=100, null=True, blank=True)
-    cart_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    cart_id = models.CharField(max_length=12, default=generate_unique_id, editable=True)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -274,7 +278,7 @@ class CartOrder(models.Model):
     country = models.CharField(max_length=100, null=True, blank=True)
     coupons = models.ManyToManyField("api.Coupon", blank=True)
     stripe_session_id = models.CharField(max_length=1000, null=True, blank=True)
-    oid = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    oid = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
 
@@ -298,7 +302,7 @@ class CartOrderItem(models.Model):
     saved = models.DecimalField(max_digits=12, default=0.00, decimal_places=2)
     coupons = models.ManyToManyField("api.Coupon", blank=True)
     applied_coupon = models.BooleanField(default=False)
-    oid = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    oid = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
     class Meta:
@@ -316,7 +320,7 @@ class CartOrderItem(models.Model):
 class Certificate(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
-    certificate_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    certificate_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -336,7 +340,7 @@ class EnrolledCourse(models.Model):
     user = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
     order_item = models.ForeignKey(CartOrderItem, on_delete=models.CASCADE)
-    enrollment_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    enrollment_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
@@ -365,7 +369,7 @@ class Note(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     title = models.CharField(max_length=1000, null=True, blank=True)
     note = models.TextField()
-    note_id = models.CharField(unique=True, max_length=12, default=generate_course_id, editable=False)
+    note_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)   
 
     def __str__(self):
