@@ -21,7 +21,8 @@ urlpatterns = [
     path("cart/course-Cart-List/<cart_id>/", api_views.CourseCartListView.as_view()),
     path("cart/course-Cart-List/<cart_id>/<item_id>/", api_views.CourseCartListDeleteView.as_view()),
     path("cart/course-Cart-Statistic/<cart_id>/", api_views.CourseCartStatisticsView.as_view()),
-
-
+    path("order/course-create-order/", api_views.CreateOrderView.as_view()),
+    path("order/course-Check-Out-order/<oid>/", api_views.CheckOutOrderView.as_view()),
+    path("coupon/course-coupon-apply/", api_views.couponView.as_view()),
 ]
 

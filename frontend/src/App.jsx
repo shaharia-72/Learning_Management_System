@@ -9,6 +9,8 @@ import Login from "../src/views/auth/Login"
 import ForgotPassword from "../src/views/auth/ForgotPassword"
 import CreateNewPassword from "../src/views/auth/CreateNewPassword"
 
+import Index from "./views/base/Index"
+
 function App() {
   return (
     <BrowserRouter>
@@ -19,7 +21,10 @@ function App() {
             <Route path="/logout/" element={<Logout/>}/>
             <Route path="/login/" element={<Login/>}/>
             <Route path="/forgot-password/" element={<ForgotPassword/>}/>
-            <Route path="/Create-New-Password/" element={<CreateNewPassword/>}/>
+            <Route path="/Create-New-Password/" element={<CreateNewPassword />} />
+            
+            {/* base route */}
+            <Route path="" element={ <Index/>} />
           </Route>
         </Routes>
       </MainWrapper>

@@ -16,6 +16,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
+from rest_framework.exceptions import ValidationError
 
 import random
 import requests
@@ -234,4 +235,155 @@ class CourseCartStatisticsView(generics.RetrieveAPIView):
         return Response({"total_price": total_price, "total_tax_fee": total_tax_fee, "total": total}, status=status.HTTP_200_OK)
     
     
+class CreateOrderView(generics.CreateAPIView):
+    serializer_class = api_serializer.CartOrderSerializer
+    permission_classes = [AllowAny]
+    queryset = api_models.CartOrder.objects.all()
     
+    def create(self, request, *args, **kwargs):
+        data = request.data
+        required_fields = ['full_name', 'email', 'country', 'cart_id', 'user_id'] 
+        
+        for field in required_fields:
+            if field not in data:
+                raise ValidationError(f"{field} is required.")
+        
+        full_name = data.get('full_name')
+        email = data.get('email')
+        country = data.get('country')
+        cart_id = data.get('cart_id')
+        user_id = data.get('user_id')
+        
+        user = get_object_or_404(User, id = user_id) if user_id else None
+        cart_items = api_models.Cart.objects.filter(cart_id = cart_id)
+        
+        if not cart_items.exists():
+            raise ValidationError("No cart items found.")
+        
+        order = api_models.CartOrder.objects.create(
+            full_name = full_name,
+            email = email,
+            country = country,
+            student = user,
+        )
+        
+        total_price = Decimal("0.00")
+        total_tax = Decimal("0.00")
+        total_total = Decimal("0.00")
+        
+        order_items = []
+        
+        for c in cart_items:
+            order_items.append(api_models.CartOrderItem(
+                order=order,
+                course=c.course,
+                price=c.price,
+                tax_fee=c.tax_fee,
+                total=c.total,
+                initial_total=c.total,
+                teacher=c.course.teacher
+            ))
+            
+            total_price += Decimal(c.price)
+            total_tax += Decimal(c.tax_fee)
+            total_total += Decimal(c.total)
+            order.teachers.add(c.course.teacher)
+
+        # Bulk create order items
+        api_models.CartOrderItem.objects.bulk_create(order_items)
+
+        # Update order totals
+        order.sub_total = total_price
+        order.tax_fee = total_tax
+        order.initial_total = total_total
+        order.total = total_total
+        order.save()
+
+        return Response({
+            "message": "Order Created Successfully",
+            "order_oid": order.oid
+        }, status=status.HTTP_201_CREATED)
+        
+class CheckOutOrderView(generics.RetrieveAPIView):
+    serializer_class = api_serializer.CartOrderSerializer
+    permission_classes = [AllowAny]
+    lookup_field = 'oid'
+    
+    def get_queryset(self):
+        oid = self.kwargs['oid']
+        return api_models.CartOrder.objects.filter(oid = oid)
+
+# class couponView(generics.CreateAPIView):
+#     serializer_class = api_serializer.CouponSerializer
+#     permission_classes = [AllowAny]
+    
+#     def create(self, request, *args, **kwargs):
+#         order_oid = request.data['order_oid']
+#         coupon_code = request.data['coupon_code']
+        
+#         order = api_models.CartOrder.objects.filter(oid = order_oid)
+#         coupon = api_models.Coupon.objects.filter(code = coupon_code)
+        
+#         if coupon:
+#             order_items = api_models.CartOrderItem.objects.filter(order= order, teacher = coupon.teacher)
+#             for i in order_items:
+#                 if not coupon in i.coupons.all():
+#                     discount = (i.total * coupon.discount) / 100
+                    
+#                     i.total -= discount
+#                     i.initial_total -= discount
+#                     i.applied_coupon = True
+#                     i.coupons.add(coupon)   
+#                     i.saved += discount
+                    
+#                     order.coupons(coupon)
+#                     order.sub_total -= discount
+#                     order.initial_total -= discount
+#                     order.total  -= discount
+#                     order.saved += discount
+                    
+#                     i.save()
+#                     order.save()
+#                     return Response({"message": "Coupon activated successfully"}, status=status.HTTP_200_OK)
+#                 else:
+#                     return Response({"message": "Coupon already applied"}, status=status.HTTP_400_BAD_REQUEST)
+#         else:
+#             return Response({"message": "Coupon does not exist"}, status=status.HTTP_400_BAD_REQUEST)
+
+
+class couponView(generics.CreateAPIView):
+    serializer_class = api_serializer.CouponSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        order_oid = request.data['order_oid']
+        coupon_code = request.data['coupon_code']
+
+        order = api_models.CartOrder.objects.get(oid=order_oid)
+        coupon = api_models.Coupon.objects.get(code=coupon_code)
+
+        if coupon:
+            order_items = api_models.CartOrderItem.objects.filter(order=order, teacher=coupon.teacher)
+            for i in order_items:
+                if not coupon in i.coupons.all():
+                    discount = i.total * coupon.discount / 100
+
+                    i.total -= discount
+                    i.price -= discount
+                    i.saved += discount
+                    i.applied_coupon = True
+                    i.coupons.add(coupon)
+
+                    order.coupons.add(coupon)
+                    order.total -= discount
+                    order.sub_total -= discount
+                    order.saved += discount
+
+                    i.save()
+                    order.save()
+                    coupon.used_by.add(order.student)
+                    return Response({"message": "Coupon Found and Activated", "icon": "success"}, status=status.HTTP_201_CREATED)
+                else:
+                    return Response({"message": "Coupon Already Applied", "icon": "warning"}, status=status.HTTP_200_OK)
+        else:
+            return Response({"message": "Coupon Not Found", "icon": "error"}, status=status.HTTP_404_NOT_FOUND)

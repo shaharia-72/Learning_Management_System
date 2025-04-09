@@ -15,7 +15,6 @@ const useAxios = () => {
   axiosInstance.interceptors.request.use(async (req) => {
     if (!accessToken || !refreshToken) {
       alert("No tokens found. Redirecting to login...");
-    //   window.location.href = "/login";
       return req;
     }
 
