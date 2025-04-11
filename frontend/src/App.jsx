@@ -10,6 +10,7 @@ import ForgotPassword from "../src/views/auth/ForgotPassword"
 import CreateNewPassword from "../src/views/auth/CreateNewPassword"
 
 import Index from "./views/base/Index"
+import CourseDetail from "./views/base/CourseDetail"
 
 function App() {
   return (
@@ -17,14 +18,16 @@ function App() {
       <MainWrapper>
         <Routes>
           <Route>
-            <Route path="/register/" element={<Register/>}/>
-            <Route path="/logout/" element={<Logout/>}/>
-            <Route path="/login/" element={<Login/>}/>
-            <Route path="/forgot-password/" element={<ForgotPassword/>}/>
+            <Route path="/register/" element={<Register />} />
+            <Route path="/logout/" element={<Logout />} />
+            <Route path="/login/" element={<Login />} />
+            <Route path="/forgot-password/" element={<ForgotPassword />} />
             <Route path="/Create-New-Password/" element={<CreateNewPassword />} />
-            
+
+
             {/* base route */}
-            <Route path="" element={ <Index/>} />
+            <Route path="" element={<Index />} />
+            <Route path="course-detail/:slug/" element={<CourseDetail />} />
           </Route>
         </Routes>
       </MainWrapper>

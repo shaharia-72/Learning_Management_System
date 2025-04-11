@@ -131,10 +131,16 @@ class NoteSerializer(serializers.ModelSerializer):
         model = api_models.Note
         fields = '__all__'
 class ReviewSerializer(serializers.ModelSerializer):
-    
+    profile = ProfileSerializer(many=False)
+
     class Meta:
-        model = api_models.Review
         fields = '__all__'
+        model = api_models.Review
+
+    def __init__(self, *args, **kwargs):
+        super(ReviewSerializer, self).__init__(*args, **kwargs)
+        request = self.context.get("request")
+        self.Meta.depth = 0 if request and request.method == "POST" else 3
 class NotificationSerializer(serializers.ModelSerializer):
     
     class Meta:
@@ -166,12 +172,24 @@ class EnrolledCourseSerializer(serializers.ModelSerializer):
     class Meta:
         model = api_models.EnrolledCourse
         fields = [ "course", "user", "teacher", "order_item", "enrollment_id", "date", "lectures", "completed_lesson", "curriculum", "note", "question_answer", "review",]
+        
+    def __init__(self,*args, **kwargs ):
+        super(EnrolledCourseSerializer, self).__init__(*args,**kwargs)
+        request = self.context.get("request")
+        
+        self.Meta.depth = 0 if request and request == "POST" else 3
 
 class CourseSerializer(serializers.ModelSerializer):
-    students = EnrolledCourseSerializer(many = True, required = False, read_only = True)
-    curriculum = VariantItemSerializer(many = True, required = False, read_only = True)
-    lectures = VariantItemSerializer(many = True, required = False, read_only = True)
-    reviews = ReviewSerializer(many = True, required = False, read_only = True)
+    students = EnrolledCourseSerializer(many=True, required=False, read_only=True,)
+    curriculum = VariantSerializer(many=True, required=False, read_only=True,)
+    lectures = VariantItemSerializer(many=True, required=False, read_only=True,)
+    reviews = ReviewSerializer(many=True, read_only=True, required=False)
     class Meta:
+        fields = ["id", "category", "teacher", "file", "image", "title", "description", "price", "language", "level", "platform_status", "teacher_course_status", "featured", "course_id", "slug", "students", "curriculum", "lectures", "average_rating", "rating_count", "reviews",]
         model = api_models.Course
-        fields = [ "id","category","teacher","title","description","file","image","price","language","level","platform_status","teacher_course_status","featured","rating","created_at","updated_at","slug","course_id","students","curriculum","lectures","reviews",]
+    def __init__(self,*args, **kwargs ):
+        super(CourseSerializer, self).__init__(*args,**kwargs)
+        request = self.context.get("request")
+        
+        self.Meta.depth = 0 if request and request == "POST" else 3
+    

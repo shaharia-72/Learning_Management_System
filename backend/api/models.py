@@ -67,7 +67,7 @@ def generate_unique_id():
 
 class Teacher(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE)
-    image = models.FileField(upload_to="course_file", blank=True, null=True, default="default.jpg")
+    image = models.FileField(upload_to="course_file", blank=True, null=True, default="teacher.jpg")
     # user = models.OneToOneField(User, on_delete=models.CASCADE)
     full_name = models.CharField(max_length=100)
     bio = models.TextField(max_length=1000, blank=True, null=True)
@@ -123,31 +123,33 @@ class Category(models.Model):
         super(Category, self).save(*args, **kwargs)
 
 class Course(models.Model):
-    category = models.ForeignKey(Category, on_delete=models.SET_NULL, blank=True, null=True)
-    teacher  = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    title = models.CharField(max_length=250)
-    description = models.TextField(blank=True, null=True)
-    file = models.FileField(upload_to="course_file" ,blank=True, null=True)
-    image = models.FileField(upload_to="course_file" ,blank=True, null=True)
+    category = models.ForeignKey(Category, on_delete=models.SET_NULL, null=True, blank=True)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
+    file = models.FileField(upload_to="course-file", blank=True, null=True)
+    image = models.FileField(upload_to="course-file", blank=True, null=True)
+    title = models.CharField(max_length=200)
+    description = models.TextField(null=True, blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0.00)
     language = models.CharField(choices=LANGUAGE, default="English", max_length=100)
     level = models.CharField(choices=LEVEL, default="Beginner", max_length=100)
     platform_status = models.CharField(choices=PLATFORM_STATUS, default="Published", max_length=100)
     teacher_course_status = models.CharField(choices=TEACHER_STATUS, default="Published", max_length=100)
     featured = models.BooleanField(default=False)
+    course_id = models.CharField(max_length=12, unique=True, editable=False, default=generate_unique_id)
+    slug = models.SlugField(unique=True, null=True, blank=True)
     rating = models.IntegerField(choices=RATING, default=0)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    slug = models.SlugField(unique=True, blank=True, null=True)
-    course_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
+
+
     def __str__(self):
         return self.title
     
     def save(self, *args, **kwargs):
         if self.slug == "" or self.slug == None:
-            self.slug = slugify(self.title) 
+            self.slug = slugify(self.title) + str(self.pk)
         super(Course, self).save(*args, **kwargs)
-        
+
     def students(self):
         return EnrolledCourse.objects.filter(course=self)
     
@@ -167,10 +169,10 @@ class Course(models.Model):
     def reviews(self):
         return Review.objects.filter(course=self, active=True)
 
-
 class Variant(models.Model):
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
     title = models.CharField(max_length=1000)
+    module = models.IntegerField(null=True)
     variant_id = models.CharField(unique=True, max_length=12, default=generate_unique_id, editable=False)
     date = models.DateTimeField(default=timezone.now)
 
