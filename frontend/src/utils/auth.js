@@ -145,24 +145,26 @@ export const setUser = async () => {
 
   if (!access_token || !refresh_token) {
     // alert("Tokens do not exist. User might be logged out.");
+    useAuthStore.getState().setLoading(false);
     return;
   }
 
   try {
     if (isAccessTokenExpired(access_token)) {
-        alert("Access token expired, attempting refresh...");
+        // alert("Access token expired, attempting refresh...");
 
       const response = await getRefreshedToken(refresh_token);
 
       if (!response?.access || !response?.refresh) {
-        alert("Token refresh failed. Logging out user.");
+        // alert("Token refresh failed. Logging out user.");
         Cookie.remove("access_token");
         Cookie.remove("refresh_token");
+        useAuthStore.getState().clearAuth();
         return;
       }
 
       setAuthUser(response.access, response.refresh);
-      alert("Tokens refreshed successfully.");
+      // alert("Tokens refreshed successfully.");
     } else {
       setAuthUser(access_token, refresh_token);
     }
@@ -170,6 +172,7 @@ export const setUser = async () => {
     alert("Error while setting user authentication:", error);
     Cookie.remove("access_token");
     Cookie.remove("refresh_token");
+    useAuthStore.getState().clearAuth();
   }
 };
 
@@ -177,7 +180,7 @@ export const getRefreshedToken = async () => {
   const refresh_token = Cookie.get("refresh_token");
 
   if (!refresh_token) {
-    alert("No refresh token found. User might be logged out.");
+    // alert("No refresh token found. User might be logged out.");
     return null;
   }
 
@@ -195,22 +198,24 @@ export const getRefreshedToken = async () => {
 export const setAuthUser = (access_token, refresh_token) => {
   try {
     if (!access_token || !refresh_token) {
-      alert("Missing authentication tokens.");
+      useAuthStore.getState().clearAuth();
+      // alert("Missing authentication tokens.");
       return;
     }
 
     Cookie.set("access_token", access_token, { expires: 1, secure: true });
     Cookie.set("refresh_token", refresh_token, { expires: 7, secure: true });
 
-    const user = jwt_decode(access_token) ?? null;
-
-    if (user) {
-      useAuthStore.getState().setUser(user);
+    const decodedToken = jwt_decode(access_token);
+    
+    if (decodedToken) {
+      useAuthStore.getState().setUser(decodedToken);
+    } else {
+      useAuthStore.getState().clearAuth();
     }
   } catch (error) {
-    alert("Error setting authentication user:", error);
-  } finally {
-    useAuthStore.getState().setLoading(false);
+    console.error("Error setting authentication user:", error);
+    useAuthStore.getState().clearAuth();
   }
 };
 
@@ -220,7 +225,17 @@ export const isAccessTokenExpired = (access_token) => {
     const decodedToken = jwt_decode(access_token);
     return decodedToken.exp < Date.now() / 1000;
   } catch (error) {
-    alert("Invalid access token:", error);
+    // alert("Invalid access token:", error);
+    console.error("Invalid access token:", error);
     return true;
   }
+};
+
+export const getCurrentUser = () => {
+  const user = useAuthStore.getState().user;
+  return user;
+};
+
+export const isAuthenticated = () => {
+  return useAuthStore.getState().isLoggedIn;
 };
