@@ -1,6 +1,8 @@
+from datetime import timezone
 from decimal import Decimal
 import logging
 import secrets
+from django.http import Http404
 from django.shortcuts import render, redirect, get_object_or_404
 from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
@@ -434,53 +436,62 @@ class StripeCheckOutView(generics.CreateAPIView):
 
 
 # Student API View all hare 
-class SearchCourseAPIView(generics.ListAPIView):
+
+class SearchCourseView(generics.ListAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
-        query = self.request.GET.get('query')
-        # learn lms
-        return api_models.Course.objects.filter(title__icontains=query, platform_status="Published", teacher_course_status="Published")
-    
+        query = self.request.GET.get('query', '') 
+        return api_models.Course.objects.filter(
+            Q(title__icontains=query) | Q(description__icontains=query),  # Added description search
+            platform_status="Published", 
+            teacher_course_status="Published"
+        )
 
 
-
-
-class StudentSummaryAPIView(generics.ListAPIView):
+class StudentSummaryView(generics.ListAPIView):
     serializer_class = api_serializer.StudentSummarySerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
         user_id = self.kwargs['user_id']
-        user = User.objects.get(id=user_id)
+        try:
+            user = User.objects.get(id=user_id)
+            
+            enrolled_courses = api_models.EnrolledCourse.objects.filter(user=user)
+            total_courses = enrolled_courses.count()
+            completed_lessons = api_models.CompletedLesson.objects.filter(user=user).count()
+            achieved_certificates = api_models.Certificate.objects.filter(user=user).count()
 
-        total_courses = api_models.EnrolledCourse.objects.filter(user=user).count()
-        completed_lessons = api_models.CompletedLesson.objects.filter(user=user).count()
-        achieved_certificates = api_models.Certificate.objects.filter(user=user).count()
+            return [{
+                "total_courses": total_courses,
+                "completed_lessons": completed_lessons,
+                "achieved_certificates": achieved_certificates,
+            }]
+        except User.DoesNotExist:
+            return []  
 
-        return [{
-            "total_courses": total_courses,
-            "completed_lessons": completed_lessons,
-            "achieved_certificates": achieved_certificates,
-        }]
-    
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
-    
-class StudentCourseListAPIView(generics.ListAPIView):
+
+
+class StudentCourseListView(generics.ListAPIView):
     serializer_class = api_serializer.EnrolledCourseSerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
         user_id = self.kwargs['user_id']
-        user =  User.objects.get(id=user_id)
-        return api_models.EnrolledCourse.objects.filter(user=user)
-    
+        try:  # Added error handling
+            user = User.objects.get(id=user_id)
+            return api_models.EnrolledCourse.objects.filter(user=user)
+        except User.DoesNotExist:
+            return api_models.EnrolledCourse.objects.none()  # Return empty queryset
 
-class StudentCourseDetailAPIView(generics.RetrieveAPIView):
+
+class StudentCourseDetailView(generics.RetrieveAPIView):
     serializer_class = api_serializer.EnrolledCourseSerializer
     permission_classes = [AllowAny]
     lookup_field = 'enrollment_id'
@@ -489,35 +500,54 @@ class StudentCourseDetailAPIView(generics.RetrieveAPIView):
         user_id = self.kwargs['user_id']
         enrollment_id = self.kwargs['enrollment_id']
 
-        user = User.objects.get(id=user_id)
-        return api_models.EnrolledCourse.objects.get(user=user, enrollment_id=enrollment_id)
-         
-        
-class StudentCourseCompletedCreateAPIView(generics.CreateAPIView):
+        try:
+            user = User.objects.get(id=user_id)
+            return api_models.EnrolledCourse.objects.get(user=user, enrollment_id=enrollment_id)
+        except (User.DoesNotExist, api_models.EnrolledCourse.DoesNotExist):
+            raise Http404("Enrolled course not found")
+
+
+class StudentCourseCompletedCreateView(generics.CreateAPIView):
     serializer_class = api_serializer.CompletedLessonSerializer
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        user_id = request.data['user_id']
-        course_id = request.data['course_id']
-        variant_item_id = request.data['variant_item_id']
-
-        user = User.objects.get(id=user_id)
-        course = api_models.Course.objects.get(id=course_id)
-        variant_item = api_models.VariantItem.objects.get(variant_item_id=variant_item_id)
-
-        completed_lessons = api_models.CompletedLesson.objects.filter(user=user, course=course, variant_item=variant_item).first()
-
-        if completed_lessons:
-            completed_lessons.delete()
-            return Response({"message": "Course marked as not completed"})
-
-        else:
-            api_models.CompletedLesson.objects.create(user=user, course=course, variant_item=variant_item)
-            return Response({"message": "Course marked as completed"})
+        user_id = request.data.get('user_id')
+        course_id = request.data.get('course_id')
+        variant_item_id = request.data.get('variant_item_id')
         
+        # Validate required fields
+        if not all([user_id, course_id, variant_item_id]):
+            return Response(
+                {"error": "Missing required fields"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-class StudentNoteCreateAPIView(generics.ListCreateAPIView):
+        try:
+            user = User.objects.get(id=user_id)
+            course = api_models.Course.objects.get(id=course_id)
+            variant_item = api_models.VariantItem.objects.get(variant_item_id=variant_item_id)
+            
+            # Use get_or_create for better efficiency
+            completed_lesson, created = api_models.CompletedLesson.objects.get_or_create(
+                user=user, course=course, variant_item=variant_item
+            )
+            
+            if not created:  # If it existed before
+                completed_lesson.delete()
+                return Response({"message": "Course marked as not completed"})
+            
+            return Response({"message": "Course marked as completed"})
+            
+        except (User.DoesNotExist, api_models.Course.DoesNotExist, 
+                api_models.VariantItem.DoesNotExist):
+            return Response(
+                {"error": "One or more objects not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class StudentNoteCreateView(generics.ListCreateAPIView):
     serializer_class = api_serializer.NoteSerializer
     permission_classes = [AllowAny]
 
@@ -525,26 +555,48 @@ class StudentNoteCreateAPIView(generics.ListCreateAPIView):
         user_id = self.kwargs['user_id']
         enrollment_id = self.kwargs['enrollment_id']
 
-        user = User.objects.get(id=user_id)
-        enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
-        
-        return api_models.Note.objects.filter(user=user, course=enrolled.course)
+        try:
+            user = User.objects.get(id=user_id)
+            enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
+            return api_models.Note.objects.filter(user=user, course=enrolled.course)
+        except (User.DoesNotExist, api_models.EnrolledCourse.DoesNotExist):
+            return api_models.Note.objects.none()
 
     def create(self, request, *args, **kwargs):
-        user_id = request.data['user_id']
-        enrollment_id = request.data['enrollment_id']
-        title = request.data['title']
-        note = request.data['note']
-
-        user = User.objects.get(id=user_id)
-        enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
+        user_id = request.data.get('user_id')
+        enrollment_id = request.data.get('enrollment_id')
+        title = request.data.get('title')
+        note = request.data.get('note')
         
-        api_models.Note.objects.create(user=user, course=enrolled.course, note=note, title=title)
+        # Validate required fields
+        if not all([user_id, enrollment_id, title, note]):
+            return Response(
+                {"error": "Missing required fields"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        return Response({"message": "Note created successfullly"}, status=status.HTTP_201_CREATED)
-    
+        try:
+            user = User.objects.get(id=user_id)
+            enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
+            
+            note_obj = api_models.Note.objects.create(
+                user=user, course=enrolled.course, note=note, title=title
+            )
+            
+            # Return created object in response
+            serializer = self.get_serializer(note_obj)
+            return Response(
+                {"message": "Note created successfully", "note": serializer.data}, 
+                status=status.HTTP_201_CREATED
+            )
+        except (User.DoesNotExist, api_models.EnrolledCourse.DoesNotExist):
+            return Response(
+                {"error": "User or enrolled course not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
 
-class StudentNoteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+
+class StudentNoteDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = api_serializer.NoteSerializer
     permission_classes = [AllowAny]
 
@@ -553,37 +605,87 @@ class StudentNoteDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         enrollment_id = self.kwargs['enrollment_id']
         note_id = self.kwargs['note_id']
 
-        user = User.objects.get(id=user_id)
-        enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
-        note = api_models.Note.objects.get(user=user, course=enrolled.course, id=note_id)
-        return note
+        try:
+            user = User.objects.get(id=user_id)
+            enrolled = api_models.EnrolledCourse.objects.get(enrollment_id=enrollment_id)
+            note = api_models.Note.objects.get(user=user, course=enrolled.course, id=note_id)
+            return note
+        except (User.DoesNotExist, api_models.EnrolledCourse.DoesNotExist, 
+                api_models.Note.DoesNotExist):
+            raise Http404("Note not found")
 
 
-class StudentRateCourseCreateAPIView(generics.CreateAPIView):
+class StudentRateCourseCreateView(generics.CreateAPIView):
     serializer_class = api_serializer.ReviewSerializer
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        user_id = request.data['user_id']
-        course_id = request.data['course_id']
-        rating = request.data['rating']
-        review = request.data['review']
+        user_id = request.data.get('user_id')
+        course_id = request.data.get('course_id')
+        rating = request.data.get('rating')
+        review = request.data.get('review')
+        
+        # Validate required fields
+        if not all([user_id, course_id, rating]):
+            return Response(
+                {"error": "Missing required fields"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+            
+        # Validate rating value
+        try:
+            rating_value = int(rating)
+            if not (1 <= rating_value <= 5):
+                return Response(
+                    {"error": "Rating must be between 1 and 5"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+        except (ValueError, TypeError):
+            return Response(
+                {"error": "Rating must be a number"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
 
-        user = User.objects.get(id=user_id)
-        course = api_models.Course.objects.get(id=course_id)
+        try:
+            user = User.objects.get(id=user_id)
+            course = api_models.Course.objects.get(id=course_id)
+            
+            # Check if user is enrolled in this course
+            if not api_models.EnrolledCourse.objects.filter(user=user, course=course).exists():
+                return Response(
+                    {"error": "User is not enrolled in this course"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+                
+            # Check if review already exists
+            existing_review = api_models.Review.objects.filter(user=user, course=course).first()
+            if existing_review:
+                return Response(
+                    {"error": "User has already reviewed this course", "review_id": existing_review.id}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
 
-        api_models.Review.objects.create(
-            user=user,
-            course=course,
-            review=review,
-            rating=rating,
-            active=True,
-        )
+            review_obj = api_models.Review.objects.create(
+                user=user,
+                course=course,
+                review=review,
+                rating=rating,
+                active=True,
+            )
+            
+            serializer = self.get_serializer(review_obj)
+            return Response(
+                {"message": "Review created successfully", "review": serializer.data}, 
+                status=status.HTTP_201_CREATED
+            )
+        except (User.DoesNotExist, api_models.Course.DoesNotExist):
+            return Response(
+                {"error": "User or course not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
 
-        return Response({"message": "Review created successfullly"}, status=status.HTTP_201_CREATED)
 
-
-class StudentRateCourseUpdateAPIView(generics.RetrieveUpdateAPIView):
+class StudentRateCourseUpdateView(generics.RetrieveUpdateAPIView):
     serializer_class = api_serializer.ReviewSerializer
     permission_classes = [AllowAny]
 
@@ -591,32 +693,198 @@ class StudentRateCourseUpdateAPIView(generics.RetrieveUpdateAPIView):
         user_id = self.kwargs['user_id']
         review_id = self.kwargs['review_id']
 
-        user = User.objects.get(id=user_id)
-        return api_models.Review.objects.get(id=review_id, user=user)
-    
+        try:
+            user = User.objects.get(id=user_id)
+            return api_models.Review.objects.get(id=review_id, user=user)
+        except (User.DoesNotExist, api_models.Review.DoesNotExist):
+            raise Http404("Review not found")
+            
+    def update(self, request, *args, **kwargs):
+        # Validate rating if present
+        rating = request.data.get('rating')
+        if rating:
+            try:
+                rating_value = int(rating)
+                if not (1 <= rating_value <= 5):
+                    return Response(
+                        {"error": "Rating must be between 1 and 5"}, 
+                        status=status.HTTP_400_BAD_REQUEST
+                    )
+            except (ValueError, TypeError):
+                return Response(
+                    {"error": "Rating must be a number"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+        return super().update(request, *args, **kwargs)
 
-class StudentWishListListCreateAPIView(generics.ListCreateAPIView):
+
+class StudentWishListListCreateView(generics.ListCreateAPIView):
     serializer_class = api_serializer.WishlistSerializer
     permission_classes = [AllowAny]
 
     def get_queryset(self):
         user_id = self.kwargs['user_id']
-        user = User.objects.get(id=user_id)
-        return api_models.Wishlist.objects.filter(user=user)
+        try:
+            user = User.objects.get(id=user_id)
+            return api_models.Wishlist.objects.filter(user=user)
+        except User.DoesNotExist:
+            return api_models.Wishlist.objects.none()
     
     def create(self, request, *args, **kwargs):
-        user_id = request.data['user_id']
-        course_id = request.data['course_id']
-
-        user = User.objects.get(id=user_id)
-        course = api_models.Course.objects.get(id=course_id)
-
-        wishlist = api_models.Wishlist.objects.filter(user=user, course=course).first()
-        if wishlist:
-            wishlist.delete()
-            return Response({"message": "Wishlist Deleted"}, status=status.HTTP_200_OK)
-        else:
-            api_models.Wishlist.objects.create(
-                user=user, course=course
+        user_id = request.data.get('user_id')
+        course_id = request.data.get('course_id')
+        
+        # Validate required fields
+        if not all([user_id, course_id]):
+            return Response(
+                {"error": "Missing required fields"}, 
+                status=status.HTTP_400_BAD_REQUEST
             )
+
+        try:
+            user = User.objects.get(id=user_id)
+            course = api_models.Course.objects.get(id=course_id)
+
+            wishlist, created = api_models.Wishlist.objects.get_or_create(user=user, course=course)
+            
+            if not created:
+                wishlist.delete()
+                return Response({"message": "Wishlist Deleted"}, status=status.HTTP_200_OK)
+            
             return Response({"message": "Wishlist Created"}, status=status.HTTP_201_CREATED)
+        except (User.DoesNotExist, api_models.Course.DoesNotExist):
+            return Response(
+                {"error": "User or course not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class QuestionAnswerListCreateView(generics.ListCreateAPIView):
+    serializer_class = api_serializer.Question_AnswerSerializer
+    permission_classes = [AllowAny]
+
+    def get_queryset(self):
+        course_id = self.kwargs['course_id']
+        try:
+            course = api_models.Course.objects.get(id=course_id)
+            # Order by most recent first
+            return api_models.Question_Answer.objects.filter(course=course).order_by('-created_at')
+        except api_models.Course.DoesNotExist:
+            return api_models.Question_Answer.objects.none()
+    
+    def create(self, request, *args, **kwargs):
+        course_id = request.data.get('course_id')
+        user_id = request.data.get('user_id')
+        title = request.data.get('title')
+        message = request.data.get('message')
+        
+        # Validate required fields
+        if not all([course_id, user_id, title, message]):
+            return Response(
+                {"error": "Missing required fields"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+            course = api_models.Course.objects.get(id=course_id)
+            
+            # Check if user is enrolled in this course
+            if not api_models.EnrolledCourse.objects.filter(user=user, course=course).exists():
+                return Response(
+                    {"error": "User is not enrolled in this course"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Use transaction to ensure both objects are created or none
+            with transaction.atomic():
+                question = api_models.Question_Answer.objects.create(
+                    course=course,
+                    user=user,
+                    title=title
+                )
+
+                api_models.Question_Answer_Message.objects.create(
+                    course=course,
+                    user=user,
+                    message=message,
+                    question=question
+                )
+            
+            serializer = self.get_serializer(question)
+            return Response(
+                {"message": "Group conversation Started", "question": serializer.data}, 
+                status=status.HTTP_201_CREATED
+            )
+        except (User.DoesNotExist, api_models.Course.DoesNotExist):
+            return Response(
+                {"error": "User or course not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+
+class QuestionAnswerMessageSendView(generics.CreateAPIView):
+    serializer_class = api_serializer.Question_Answer_MessageSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        course_id = request.data.get('course_id')
+        qa_id = request.data.get('qa_id')
+        user_id = request.data.get('user_id')
+        message = request.data.get('message')
+        
+        # Validate required fields
+        if not all([course_id, qa_id, user_id, message]):
+            return Response(
+                {"error": "Missing required fields"}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+            course = api_models.Course.objects.get(id=course_id)
+            question = api_models.Question_Answer.objects.get(qa_id=qa_id)
+            
+            # Check if user is enrolled in this course or is teacher of the course
+            is_enrolled = api_models.EnrolledCourse.objects.filter(user=user, course=course).exists()
+            is_teacher = course.teacher == user
+            
+            if not (is_enrolled or is_teacher):
+                return Response(
+                    {"error": "You don't have permission to send messages in this conversation"}, 
+                    status=status.HTTP_403_FORBIDDEN
+                )
+            
+            # Check if question belongs to the course
+            if question.course != course:
+                return Response(
+                    {"error": "This question doesn't belong to the specified course"}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            
+            message_obj = api_models.Question_Answer_Message.objects.create(
+                course=course,
+                user=user,
+                message=message,
+                question=question
+            )
+
+            # Update the question's updated_at field
+            question.updated_at = timezone.now()
+            question.save()
+
+            question_serializer = api_serializer.Question_AnswerSerializer(question)
+            message_serializer = api_serializer.Question_Answer_MessageSerializer(message_obj)
+            
+            return Response({
+                "message": "Message Sent", 
+                "question": question_serializer.data,
+                "new_message": message_serializer.data
+            })
+        except (User.DoesNotExist, api_models.Course.DoesNotExist, 
+                api_models.Question_Answer.DoesNotExist):
+            return Response(
+                {"error": "One or more objects not found"}, 
+                status=status.HTTP_404_NOT_FOUND
+            )

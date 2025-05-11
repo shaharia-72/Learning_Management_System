@@ -26,6 +26,20 @@ urlpatterns = [
     path("coupon/course-coupon-apply/", api_views.couponView.as_view()),
 
     # payment
-    path("payment/strip-checkout/<str:order_oid>/", api_views.StripeCheckOutView.as_view(), name='stripe-checkout')
+    path("payment/strip-checkout/<str:order_oid>/", api_views.StripeCheckOutView.as_view(), name='stripe-checkout'),
+    
+    # Student API Endpoints
+    path("student/summary/<user_id>/", api_views.StudentSummaryView.as_view()),
+    path("student/course-list/<user_id>/", api_views.StudentCourseListView.as_view()),
+    path("student/course-detail/<user_id>/<enrollment_id>/", api_views.StudentCourseDetailView.as_view()),
+    path("student/course-completed/", api_views.StudentCourseCompletedCreateView.as_view()),
+    path("student/course-note/<user_id>/<enrollment_id>/", api_views.StudentNoteCreateView.as_view()),
+    path("student/course-note-detail/<user_id>/<enrollment_id>/<note_id>/", api_views.StudentNoteDetailView.as_view()),
+    path("student/rate-course/", api_views.StudentRateCourseCreateView.as_view()),
+    path("student/review-detail/<user_id>/<review_id>/", api_views.StudentRateCourseUpdateView.as_view()),
+    path("student/wishlist/<user_id>/", api_views.StudentWishListListCreateView.as_view()),
+    path("student/question-answer-list-create/<course_id>/", api_views.QuestionAnswerListCreateView.as_view()),
+    path("student/question-answer-message-create/", api_views.QuestionAnswerMessageSendView.as_view()),
+
 ]
 
