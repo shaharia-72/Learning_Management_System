@@ -11,6 +11,9 @@ import CreateNewPassword from "../src/views/auth/CreateNewPassword"
 
 import Index from "./views/base/Index"
 import CourseDetail from "./views/base/CourseDetail"
+import StudentDashboard from "./views/student/Dashboard"
+import StudentCourseDetail from "./views/student/CourseDetail"
+import StudentCourses from "./views/student/Courses"
 
 function App() {
   return (
@@ -26,8 +29,15 @@ function App() {
 
 
             {/* base route */}
-            <Route path="" element={<Index />} />
+            <Route path="/" element={<Index />} />
             <Route path="course-detail/:slug/" element={<CourseDetail />} />
+
+
+
+            {/* Student Routes */}
+            <Route path="/student/dashboard/" element={<StudentDashboard />} />
+            <Route path="/student/courses/" element={<StudentCourses />} />
+            <Route path="/student/courses/:enrollment_id/" element={<StudentCourseDetail />} />
           </Route>
         </Routes>
       </MainWrapper>
