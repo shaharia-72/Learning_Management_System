@@ -1,15 +1,16 @@
 import Swal from "sweetalert2";
 
-function Toast(){
-    const Toast = Swal.mixin({
+function Toast() {
+    return Swal.mixin({
         toast: true,
-        position: 'top',
+        position: 'top-end',
         showConfirmButton: false,
         timer: 1500,
-        timerProgressBar: true
-    })
-
-    return Toast
+        timerProgressBar: true,
+        didOpen: (toast) => {
+            toast.style.marginTop = "50px";
+        }
+    });
 }
 
-export default Toast
+export default Toast;

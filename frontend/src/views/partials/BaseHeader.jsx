@@ -1,10 +1,10 @@
-import React, { useContext, useState } from "react";
+import React, {  useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { CartContext } from "../plugin/Context";
-import { useAuthStore } from "../../store/auth";
+// import { useAuthStore } from "../../store/auth";
 
 function BaseHeader() {
-    const [cartCount, setCartCount] = useContext(CartContext);
+    // const [cartCount, setCartCount] = useContext(CartContext);
     const [searchQuery, setSearchQuery] = useState("");
     const navigate = useNavigate();
 
@@ -12,7 +12,7 @@ function BaseHeader() {
         navigate(`/search/?search=${searchQuery}`);
     };
 
-    const [isLoggedIn, user] = useAuthStore((state) => [state.isLoggedIn, state.user]);
+    // const [isLoggedIn, user] = useAuthStore((state) => [state.isLoggedIn, state.user]);
 
     return (
         <div>
@@ -175,7 +175,7 @@ function BaseHeader() {
                                 Search <i className="fas fa-search"></i>
                             </button>
                         </div>
-                        {isLoggedIn() === true ? (
+                        {/* {isLoggedIn() === true ? (
                             <>
                                 <Link to="/logout/" className="btn btn-primary ms-2" type="submit">
                                     Logout <i className="fas fa-usign-out-alt"></i>
@@ -183,7 +183,7 @@ function BaseHeader() {
                             </>
                         ) : (
                             <>
-                                {/* Login and register button */}
+                                Login and register button
                                 <Link to="/login/" className="btn btn-primary ms-2" type="submit">
                                     Login <i className="fas fa-sign-in-alt"></i>
                                 </Link>
@@ -195,9 +195,9 @@ function BaseHeader() {
                                     Register <i className="fas fa-user-plus"> </i>
                                 </Link>
                             </>
-                        )}
+                        )} */}
                         <Link className="btn btn-success ms-2" to="/cart/">
-                            Cart ({cartCount}) <i className="fas fa-shopping-cart"> </i>
+                            {/* Cart ({cartCount}) <i className="fas fa-shopping-cart"> </i> */}
                         </Link>
                     </div>
                 </div>

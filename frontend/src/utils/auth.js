@@ -15,10 +15,6 @@ export const login = async (email, password) => {
             password,
         });
         if(status === 200) {
-        //     const decoded = jwt_decode(data.access);
-        //     useAuthStore.getState().setUser(decoded);
-        //     Cookie.set("access_token", data.access);
-            //     Cookie.set("refresh_token", data.refresh);
             setAuthUser(data.access, data.refresh);
             Swal.fire({
                 title: "Success",
@@ -37,56 +33,92 @@ export const login = async (email, password) => {
     }
 };
 
-export const register = async (first_name, last_name, email, password, confirm_password) => {
-    try {
+// export const register = async (first_name, last_name, email, password, confirm_password) => {
+//     try {
 
-        if (password !== confirm_password) {
-            return { data: null, error: "Passwords do not match!" };
-        }
+//         if (password !== confirm_password) {
+//             return { data: null, error: "Passwords do not match!" };
+//         }
         
-        const { data } = await axios.post(`/user/register/`, {
-            first_name,
-            last_name,
-            email,
-            password,
-            confirm_password
-        });
+//         const { data } = await axios.post(`/user/register/`, {
+//             first_name,
+//             last_name,
+//             email,
+//             password,
+//             confirm_password
+//         });
 
-        await login(email, password);
-        Swal.fire({
-            title: "Success",
-            text: "Registration successful!",
-            icon: "success",
-        });
-      return {
-        data: null,
-        alert:("Registration failed")
-        // error: error.response.data?.detail || "somethings is wrong",          
-      }
+//         await login(email, password);
+//         Swal.fire({
+//             title: "Success",
+//             text: "Registration successful!",
+//             icon: "success",
+//         });
+//       return {
+//         data: null,
+        // alert:("Registration failed")
+        // error: error.response.data?.detail || "somethings is wrong",
+//       }
         
-    } catch (error) {
+//     } catch (error) {
       // alert(error.response.data.email)
       // alert(error.response.data.first_name)
       // alert(error.response.data.last_name)
       // alert(error.response.data.password)
       // alert(error.response.data.confirm_password)
-      return {
-        data: null,
-        // error: error.response?.data 
-        //   ? Object.values(error.response.data).flat().join(" | ") 
+//       return {
+//         data: null,
+        // error: error.response?.data
+        //   ? Object.values(error.response.data).flat().join(" | ")
         //   : "Something went wrong, please try again."
-        error: `${error.response.data.email}` || "Registration failed"
-      };
-    }
+//         error: `${error.response.data.email}` || "Registration failed"
+//       };
+//     }
+// };
+
+export const register = async (first_name, last_name, email, password, confirm_password) => {
+  try {
+    const response = await axios.post(`/user/register/`, {
+      first_name,
+      last_name,
+      email,
+      password,
+      confirm_password,
+    });
+
+    // Show success message
+    Swal.fire({
+      title: "Success",
+      text: "Registration successful!",
+      icon: "success",
+    });
+
+    return { data: response.data, error: null };
+  } catch (error) {
+    // console.log("Registration Error:", error.response?.data);
+
+    // Extracting error message safely
+    const errorMessage = error.response?.data?.email?.[0] || 
+                        error.response?.data?.password?.[0] ||
+                        error.response?.data?.confirm_password?.[0] ||
+                        error.response?.data?.non_field_errors?.[0] ||
+                        "Registration failed. Please try again.";
+
+    // Show error message
+    return { error: errorMessage };
+  }
 };
 
+
 export const logout = () => {
-    Cookie.remove("access-token");
-    Cookie.remove("refresh-token");
-
-    useAuthStore.getState().setUser(null);
-
-    alert("Logout successful!");
+    Cookie.remove("access_token");
+    Cookie.remove("refresh_token");
+  useAuthStore.getState().setUser(null);
+  Swal.fire({
+    title: 'Logged Out',
+    text: 'You have successfully logged out',
+    icon: 'success',
+  });
 }
 
 // export const setUser = async () => {

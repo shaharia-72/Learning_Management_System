@@ -1,38 +1,46 @@
 import { useState, useEffect } from "react";
 
-import apiInstance from "../../utils/axios";
+// import apiInstance from "../../utils/axios";
 import { login } from "../../utils/auth";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import { Link, useNavigate } from "react-router-dom";
+import Swal from "sweetalert2";
 
 function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const Navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(false);
 
-  const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const handelSubmit = async (e) => {
+    e.preventDefault()
     setIsLoading(true);
-    const { error } = await login(email, password);
-    if (error) {
-      setIsLoading(false);
-      alert(error);
-    } else {
-      navigate("/");
+
+    const {error} = await login(email, password)
+    if (error)
+    {
+      Swal.fire({
+        title: "Error",
+        text: error,
+        icon: "error",
+      });
       setIsLoading(false);
     }
-  };
+    else
+      Navigate("/");
+      setIsLoading(false);
+    // alert("Login Successful!");
+  }
 
   return (
     <>
       <BaseHeader />
 
       <section
-        className="container d-flex flex-column vh-100"
-        style={{ marginTop: "150px" }}
+        className="container d-flex flex-column"
+        style={{ marginTop: "100px", marginBottom: "100px" } }
       >
         <div className="row align-items-center justify-content-center g-0 h-lg-100 py-8">
           <div className="col-lg-5 col-md-8 py-8 py-xl-0">
@@ -51,7 +59,7 @@ function Login() {
                 <form
                   className="needs-validation"
                   noValidate=""
-                  onSubmit={handleSubmit}
+                  onSubmit={handelSubmit}
                 >
                   {/* Username */}
                   <div className="mb-3">
@@ -65,7 +73,8 @@ function Login() {
                       name="email"
                       placeholder="johndoe@gmail.com"
                       required=""
-                      onChange={(e) => setEmail(e.target.value)}
+                      onChange={(e)=> setEmail(e.target.value)}
+                   
                     />
                     <div className="invalid-feedback">
                       Please enter valid username.

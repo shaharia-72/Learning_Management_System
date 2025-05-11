@@ -24,7 +24,7 @@ environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-44rlwe@=rq_q8yb^p4e7!55(qd^o((1-lo&t^w6^i5#nxlx#=_'
+SECRET_KEY=env("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -272,6 +272,8 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = 'noreplay@gmail'
+STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
 
 
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
+BACKEND_URL=env("BACKEND_URL")

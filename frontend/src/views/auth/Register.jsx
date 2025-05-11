@@ -1,6 +1,7 @@
 // import React from "react";
+import Swal from "sweetalert2";
 import { useState, useEffect } from "react";
-import { Link} from "react-router-dom";
+import { Link, useNavigate} from "react-router-dom";
 
 import apiInstance from "../../utils/axios";
 import BaseHeader from "../partials/BaseHeader";
@@ -16,6 +17,7 @@ function Register() {
   // const [about, setAbout] = useState("");
   // const [country, setCountry] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const Navigate = useNavigate();
 
   // console.log(first_name);
   // console.log(last_name);
@@ -23,26 +25,31 @@ function Register() {
   // console.log(password);
   // console.log(confirm_password);
   // console.log(about);
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    const {error} = register(first_name, last_name, email, password, confirm_password)
+    const {error} = await register(first_name, last_name, email, password, confirm_password)
     if (error)
     {
-      alert(error);
-      isLoading(false);
+      // alert(error);
+      Swal.fire({
+        title: "Error",
+        text: error,
+        icon: "error",
+      });
+      setIsLoading(false);
     }
     else {
-      // alert("Registration Successful!");
-      setIsLoading(true);
+      Navigate("/");
+      alert("Registration Successful!");
     }
 
   }
   return (
     <>
-      {/* <BaseHeader /> */}
+      <BaseHeader />
 
-      <section className="container d-flex flex-column vh-100" style={{ marginTop: "150px" }}>
+      <section className="container d-flex flex-column" style={{ marginTop: "10px" }}>
         <div className="row align-items-center justify-content-center g-0 h-lg-100 py-8">
           <div className="col-lg-5 col-md-8 py-8 py-xl-0">
             <div className="card shadow">
@@ -122,11 +129,25 @@ function Register() {
                     />
                   </div>
 
-                  <button type="submit" className="btn btn-primary">
+                  <div>
+                    <div className="d-grid">
+                      {isLoading === true && (
+                        <button
+                          disabled
+                          type="submit"
+                          className="btn btn-primary"
+                        >
+                          Processing <i className="fas fa-spinner fa-spin"></i>
+                        </button>
+                      )}
+
+                      {isLoading === false && (
+                        <button type="submit" className="btn btn-primary">
                           Sign Up <i className="fas fa-user-plus"></i>
                         </button>
-
-                  
+                      )}
+                    </div>
+                  </div>
                 </form>
               </div>
             </div>
@@ -134,7 +155,7 @@ function Register() {
         </div>
       </section>
 
-      {/* <BaseFooter /> */}
+      <BaseFooter />
     </>
   );
 };

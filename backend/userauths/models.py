@@ -14,7 +14,7 @@ def generate_unique_user_id():
 
 
 class User(AbstractUser):
-    user_unique_id = models.CharField(max_length=11, unique=True, editable=False, default=generate_unique_user_id)
+    user_id = models.CharField(max_length=11, unique=True, editable=False, default=generate_unique_user_id)
     # username = models.CharField(max_length=20,unique=True)
     email = models.EmailField(unique=True)
     otp = models.CharField(max_length=8, null=True, blank=True)

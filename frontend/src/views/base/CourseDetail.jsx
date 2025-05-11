@@ -1,1738 +1,929 @@
-import { useState, useEffect, useContext } from "react";
-import { Link } from "react-router-dom";
-import moment from "moment";
-import Swal from "sweetalert2";
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
-import BaseHeader from "../partials/BaseHeader";
-import BaseFooter from "../partials/BaseFooter";
-import { useParams } from "react-router-dom";
-import useAxios from "../../utils/useAxios";
-import CartId from "../plugin/CartId";
-import GetCurrentAddress from "../plugin/UserCountry";
-import UserData from "../plugin/UserData";
-import Toast from "../plugin/Toast";
-import { CartContext } from "../plugin/Context";
-import apiInstance from "../../utils/axios";
+import BaseHeader from '../partials/BaseHeader'
+import BaseFooter from '../partials/BaseFooter'
+import moment from 'moment'
+import useAxios from '../../utils/useAxios'
+import { useParams } from 'react-router-dom'
 
 function CourseDetail() {
-  const [course, setCourse] = useState([]);
+  const [course, setCourse] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [addToCartBtn, setAddToCartBtn] = useState("Add To Cart");
-  const [cartCount, setCartCount] = useContext(CartContext);
-
+  const [error, setError] = useState(null);
   const param = useParams();
 
-  const country = GetCurrentAddress().country;
-  const userId = UserData().user_id;
-
-  const fetchCourse = () => {
-    useAxios()
-      .get(`course/course-detail/${param.slug}/`)
-      .then((res) => {
-        setCourse(res.data);
-        setIsLoading();
-      });
-  };
-
   useEffect(() => {
+    const fetchCourse = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const response = await useAxios().get(`/course/course-detail/${param.slug}/`);
+        setCourse(response.data);
+        console.log(response.data);
+      } catch (error) {
+        setError(error);
+        console.error("Error fetching course: ", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
     fetchCourse();
-  }, []);
+  }, [param.slug]);
 
-  const addToCart = async (courseId, userId, price, country, cartId) => {
-    setAddToCartBtn("Adding To Cart");
-    const formdata = new FormData();
-
-    formdata.append("course_id", courseId);
-    formdata.append("user_id", userId);
-    formdata.append("price", price);
-    formdata.append("country_name", country);
-    formdata.append("cart_id", cartId);
-
-    try {
-      await useAxios()
-        .post(`course/cart/`, formdata)
-        .then((res) => {
-          console.log(res.data);
-          setAddToCartBtn("Added To Cart");
-          Toast().fire({
-            title: "Added To Cart",
-            icon: "success",
-          });
-
-          // Set cart count after adding to cart
-          apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
-            setCartCount(res.data?.length);
-          });
-        });
-    } catch (error) {
-      console.log(error);
-      setAddToCartBtn("Add To Cart");
-    }
-  };
 
   return (
     <>
       <BaseHeader />
 
-      <>
-        {isLoading === true ? (
-          <p>
-            Loading <i className="fas fa-spinner fa-spin"></i>
-          </p>
-        ) : (
-          <>
-            <section className="bg-light py-0 py-sm-5">
-              <div className="container">
-                <div className="row py-5">
-                  <div className="col-lg-8">
-                    {/* Badge */}
-                    <h6 className="mb-3 font-base bg-primary text-white py-2 px-4 rounded-2 d-inline-block">
-                      {course.category.title}
-                    </h6>
-                    {/* Title */}
-                    <h1 className="mb-3">{course.title}</h1>
-                    <p
-                      className="mb-3"
-                      dangerouslySetInnerHTML={{
-                        __html: `${course?.description?.slice(0, 200)}`,
-                      }}
-                    ></p>
-                    {/* Content */}
-                    <ul className="list-inline mb-0">
-                      <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                        <i className="fas fa-star text-warning me-2" />
-                        {course.average_rating}/5
+      <div className="course-details-page">
+        {/* Hero Section */}
+        {/* Enhanced Hero Section */}
+        {/* Hero Section */}
+        <section className="hero-section py-5 py-lg-7 bg-white">
+          <div className="container">
+            <div className="row align-items-center">
+              {/* Left Content */}
+              <div className="col-lg-7 order-lg-1 order-2">
+                <div className="hero-content pe-lg-5">
+                  {/* Badge */}
+                  <span className="badge bg-primary bg-opacity-10 text-primary mb-3 px-3 py-2">
+                    <i className="fas fa-laptop-code me-2"></i> {course?.category?.title || "No information available"}
+                  </span>
+
+                  {/* Title */}
+                  <h1 className="display-4 fw-bold mb-4 text-dark">
+                    {course?.title || "No information available"}
+                  </h1>
+
+                  {/* Description */}
+                  <p className="lead mb-4 text-muted">
+                    The ultimate 12-course bundle to take you from beginner to job-ready full-stack developer.
+                    Build modern web applications with React frontends and Django backends.
+                  </p>
+
+                  {/* Stats */}
+                  <div className="d-flex flex-wrap gap-4 mb-4">
+                    <div className="d-flex align-items-center">
+                      <div className="icon-box bg-primary bg-opacity-10 text-primary rounded-circle me-3 p-2">
+                        <i className="fas fa-star"></i>
+                      </div>
+                      <div>
+                        <h6 className="mb-0 fw-bold">{course?.average_rating?.null ? course.average_rating : "0"}/5.0</h6>
+                        <small className="text-muted">(2,450 reviews)</small>
+                      </div>
+                    </div>
+                    <div className="d-flex align-items-center">
+                      <div className="icon-box bg-info bg-opacity-10 text-info rounded-circle me-3 p-2">
+                        <i className="fas fa-users"></i>
+                      </div>
+                      <div>
+                        <h6 className="mb-0 fw-bold">{course?.students?.length > 1 ? course?.students?.length : "0"}+</h6>
+                        <small className="text-muted">Students</small>
+                      </div>
+                    </div>
+                    <div className="d-flex align-items-center">
+                      <div className="icon-box bg-success bg-opacity-10 text-success rounded-circle me-3 p-2">
+                        <i className="fas fa-signal"></i>
+                      </div>
+                      <div>
+                        <h6 className="mb-0 fw-bold">{course?.level}</h6>
+                        <small className="text-muted">to Advanced</small>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* CTA Buttons */}
+                  <div className="d-flex flex-wrap gap-3 mb-4">
+                    <button className="btn btn-primary px-4 py-3 fw-bold">
+                      <i className="fas fa-shopping-cart me-2"></i> Enroll Now
+                    </button>
+                    <button
+                      className="btn btn-outline-primary px-4 py-3 fw-bold"
+                      data-bs-toggle="modal"
+                      data-bs-target="#previewModal"
+                    >
+                      <i className="fas fa-play me-2"></i> Preview Course
+                    </button>
+                  </div>
+
+                  {/* Last Updated & Guarantee */}
+                  <div className="d-flex flex-wrap align-items-center gap-4">
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-calendar-alt text-muted me-2"></i>
+                      <small className="text-muted">{moment(course?.date).format("DD MMM, YYYY")}</small>
+                    </div>
+                    <div className="d-flex align-items-center">
+                      <i className="fas fa-shield-alt text-muted me-2"></i>
+                      <small className="text-muted">30-Day Money-Back Guarantee</small>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Image */}
+              <div className="col-lg-5 order-lg-2 order-1 mb-4 mb-lg-0">
+                <div className="hero-image position-relative">
+                  <div className="position-relative rounded-4 overflow-hidden shadow-lg" style={{ aspectRatio: '16 / 9' }}>
+                    <img
+                      src={course?.image}
+                      alt={course?.title || "Course image"}
+                      className="img-fluid w-100 h-100 object-fit-cover"
+                      style={{ objectFit: 'cover' }}
+                    />
+                    <div className="position-absolute top-0 start-0 w-100 h-100 bg-dark bg-opacity-10"></div>
+                    <div className="position-absolute top-50 start-50 translate-middle">
+                      <button
+                        className="btn btn-danger btn-lg rounded-circle shadow"
+                        data-bs-toggle="modal"
+                        data-bs-target="#previewModal"
+                      >
+                        <i className="fas fa-play"></i>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Floating Badges */}
+                  <div className="position-absolute bottom-0 start-0 translate-middle-y ms-4">
+                    <div className="d-flex flex-column gap-2">
+                      <span className="badge bg-white text-dark shadow-sm py-2 px-3">
+                        <i className="fas fa-certificate text-warning me-2"></i>
+                        Certificate Included
+                      </span>
+                      <span className="badge bg-white text-dark shadow-sm py-2 px-3">
+                        <i className="fas fa-infinity text-primary me-2"></i>
+                        Lifetime Access
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        {/* Main Content Section */}
+        <section className="py-5">
+          <div className="container">
+            <div className="row">
+              {/* Left Content Column */}
+              <div className="col-lg-8">
+                {/* Course Navigation Tabs */}
+                <div className="card shadow-sm mb-5">
+                  <div className="card-header bg-white border-bottom">
+                    <ul className="nav nav-tabs card-header-tabs" id="courseTabs" role="tablist">
+                      <li className="nav-item" role="presentation">
+                        <button
+                          className="nav-link active"
+                          id="overview-tab"
+                          data-bs-toggle="tab"
+                          data-bs-target="#overview"
+                          type="button"
+                          role="tab"
+                        >
+                          <i className="fas fa-info-circle me-2"></i> Overview
+                        </button>
                       </li>
-                      <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                        <i className="fas fa-user-graduate text-orange me-2" />
-                        {course.students?.length} Enrolled
+                      <li className="nav-item" role="presentation">
+                        <button
+                          className="nav-link"
+                          id="curriculum-tab"
+                          data-bs-toggle="tab"
+                          data-bs-target="#curriculum"
+                          type="button"
+                          role="tab"
+                        >
+                          <i className="fas fa-list-ol me-2"></i> Curriculum
+                        </button>
                       </li>
-                      <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                        <i className="fas fa-signal text-success me-2" />
-                        {course.level}
+                      <li className="nav-item" role="presentation">
+                        <button
+                          className="nav-link"
+                          id="instructor-tab"
+                          data-bs-toggle="tab"
+                          data-bs-target="#instructor"
+                          type="button"
+                          role="tab"
+                        >
+                          <i className="fas fa-user-tie me-2"></i> Instructor
+                        </button>
                       </li>
-                      <li className="list-inline-item h6 me-3 mb-1 mb-sm-0">
-                        <i className="bi bi-patch-exclamation-fill text-danger me-2" />
-                        {moment(course.date).format("DD MMM, YYYY")}
-                      </li>
-                      <li className="list-inline-item h6 mb-0">
-                        <i className="fas fa-globe text-info me-2" />
-                        {course.language}
+                      <li className="nav-item" role="presentation">
+                        <button
+                          className="nav-link"
+                          id="reviews-tab"
+                          data-bs-toggle="tab"
+                          data-bs-target="#reviews"
+                          type="button"
+                          role="tab"
+                        >
+                          <i className="fas fa-star-half-alt me-2"></i> Reviews
+                        </button>
                       </li>
                     </ul>
                   </div>
-                </div>
-              </div>
-            </section>
-            <section className="pb-0 py-lg-5">
-              <div className="container">
-                <div className="row">
-                  {/* Main content START */}
-                  <div className="col-lg-8">
-                    <div className="card shadow rounded-2 p-0">
-                      {/* Tabs START */}
-                      <div className="card-header border-bottom px-4 py-3">
-                        <ul
-                          className="nav nav-pills nav-tabs-line py-0"
-                          id="course-pills-tab"
-                          role="tablist"
-                        >
-                          {/* Tab item */}
-                          <li
-                            className="nav-item me-2 me-sm-4"
-                            role="presentation"
-                          >
-                            <button
-                              className="nav-link mb-2 mb-md-0 active"
-                              id="course-pills-tab-1"
-                              data-bs-toggle="pill"
-                              data-bs-target="#course-pills-1"
-                              type="button"
-                              role="tab"
-                              aria-controls="course-pills-1"
-                              aria-selected="true"
-                            >
-                              Overview
-                            </button>
+
+                  <div className="card-body p-4">
+                    <div className="tab-content" id="courseTabsContent">
+                      {/* Overview Tab */}
+                      <div className="tab-pane fade show active" id="overview" role="tabpanel">
+                        <h3 className="mb-4">Course Description</h3>
+                        <div >
+                          <p className="lead text-muted lh-lg"
+                            dangerouslySetInnerHTML={{
+                              __html: course?.description?.slice(0, 200),
+                            }}></p>
+
+
+                        </div>
+                        <h4 className="mb-3">What You'll Learn</h4>
+                        <div className="row">
+                          <div className="col-md-6">
+                            <ul className="list-unstyled">
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                React fundamentals and advanced concepts
+                              </li>
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                Django models, views, and templates
+                              </li>
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                REST API development with Django REST Framework
+                              </li>
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                Authentication and authorization
+                              </li>
+                            </ul>
+                          </div>
+                          <div className="col-md-6">
+                            <ul className="list-unstyled">
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                State management with Redux
+                              </li>
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                Deployment to production
+                              </li>
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                Testing and debugging
+                              </li>
+                              <li className="mb-2">
+                                <i className="fas fa-check-circle text-success me-2"></i>
+                                Performance optimization
+                              </li>
+                            </ul>
+                          </div>
+                        </div>
+
+                        <h4 className="mt-4 mb-3">Course Requirements</h4>
+                        <ul className="list-group list-group-flush mb-4">
+                          <li className="list-group-item bg-light">
+                            <i className="fas fa-check me-2 text-primary"></i>
+                            Basic understanding of HTML, CSS, and JavaScript
                           </li>
-                          {/* Tab item */}
-                          <li
-                            className="nav-item me-2 me-sm-4"
-                            role="presentation"
-                          >
-                            <button
-                              className="nav-link mb-2 mb-md-0"
-                              id="course-pills-tab-2"
-                              data-bs-toggle="pill"
-                              data-bs-target="#course-pills-2"
-                              type="button"
-                              role="tab"
-                              aria-controls="course-pills-2"
-                              aria-selected="false"
-                            >
-                              Curriculum
-                            </button>
+                          <li className="list-group-item bg-light">
+                            <i className="fas fa-check me-2 text-primary"></i>
+                            No prior React or Django experience required
                           </li>
-                          {/* Tab item */}
-                          <li
-                            className="nav-item me-2 me-sm-4"
-                            role="presentation"
-                          >
-                            <button
-                              className="nav-link mb-2 mb-md-0"
-                              id="course-pills-tab-3"
-                              data-bs-toggle="pill"
-                              data-bs-target="#course-pills-3"
-                              type="button"
-                              role="tab"
-                              aria-controls="course-pills-3"
-                              aria-selected="false"
-                            >
-                              Instructor
-                            </button>
-                          </li>
-                          {/* Tab item */}
-                          <li
-                            className="nav-item me-2 me-sm-4"
-                            role="presentation"
-                          >
-                            <button
-                              className="nav-link mb-2 mb-md-0"
-                              id="course-pills-tab-4"
-                              data-bs-toggle="pill"
-                              data-bs-target="#course-pills-4"
-                              type="button"
-                              role="tab"
-                              aria-controls="course-pills-4"
-                              aria-selected="false"
-                            >
-                              Reviews
-                            </button>
-                          </li>
-                          {/* Tab item */}
-                          <li
-                            className="nav-item me-2 me-sm-4 d-none"
-                            role="presentation"
-                          >
-                            <button
-                              className="nav-link mb-2 mb-md-0"
-                              id="course-pills-tab-5"
-                              data-bs-toggle="pill"
-                              data-bs-target="#course-pills-5"
-                              type="button"
-                              role="tab"
-                              aria-controls="course-pills-5"
-                              aria-selected="false"
-                            >
-                              FAQs
-                            </button>
-                          </li>
-                          {/* Tab item */}
-                          <li
-                            className="nav-item me-2 me-sm-4 d-none"
-                            role="presentation"
-                          >
-                            <button
-                              className="nav-link mb-2 mb-md-0"
-                              id="course-pills-tab-6"
-                              data-bs-toggle="pill"
-                              data-bs-target="#course-pills-6"
-                              type="button"
-                              role="tab"
-                              aria-controls="course-pills-6"
-                              aria-selected="false"
-                            >
-                              Comment
-                            </button>
+                          <li className="list-group-item bg-light">
+                            <i className="fas fa-check me-2 text-primary"></i>
+                            A computer with internet access
                           </li>
                         </ul>
-                      </div>
-                      {/* Tabs END */}
-                      {/* Tab contents START */}
-                      <div className="card-body p-4">
-                        <div
-                          className="tab-content pt-2"
-                          id="course-pills-tabContent"
-                        >
-                          {/* Content START */}
-                          <div
-                            className="tab-pane fade show active"
-                            id="course-pills-1"
-                            role="tabpanel"
-                            aria-labelledby="course-pills-tab-1"
-                          >
-                            <h5 className="mb-3">Course Description</h5>
-                            <p
-                              className="mb-3"
-                              dangerouslySetInnerHTML={{
-                                __html: `${course?.description}`,
-                              }}
-                            ></p>
 
-                            {/* Course detail END */}
-                          </div>
-                          {/* Content END */}
-                          {/* Content START */}
-                          <div
-                            className="tab-pane fade"
-                            id="course-pills-2"
-                            role="tabpanel"
-                            aria-labelledby="course-pills-tab-2"
-                          >
-                            {/* Course accordion START */}
-                            <div
-                              className="accordion accordion-icon accordion-bg-light"
-                              id="accordionExample2"
-                            >
-                              {/* Item */}
-                              {course?.curriculum?.map((c, index) => (
-                                <div className="accordion-item mb-3">
-                                  <h6
-                                    className="accordion-header font-base"
-                                    id="heading-1"
-                                  >
-                                    <button
-                                      className="accordion-button fw-bold rounded d-sm-flex d-inline-block collapsed"
-                                      type="button"
-                                      data-bs-toggle="collapse"
-                                      data-bs-target={`#collapse-${c.variant_id}`}
-                                      aria-expanded="true"
-                                      aria-controls={`collapse-${c.variant_id}`}
-                                    >
-                                      {c.title}
-                                    </button>
-                                  </h6>
-                                  <div
-                                    id={`collapse-${c.variant_id}`}
-                                    className="accordion-collapse collapse show"
-                                    aria-labelledby="heading-1"
-                                    data-bs-parent="#accordionExample2"
-                                  >
-                                    <div className="accordion-body mt-3">
-                                      {/* Course lecture */}
-                                      {c.variant_items?.map((l, index) => (
-                                        <>
-                                          <div className="d-flex justify-content-between align-items-center">
-                                            <div className="position-relative d-flex align-items-center">
-                                              <a
-                                                href="#"
-                                                className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                              >
-                                                {l.preview === true ? (
-                                                  <i className="fas fa-play me-0" />
-                                                ) : (
-                                                  <i className="fas fa-lock me-0" />
-                                                )}
-                                              </a>
-                                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
-                                                {l.title}
-                                              </span>
-                                            </div>
-                                            <p className="mb-0">
-                                              {c.content_duration}
-                                            </p>
-                                          </div>
-                                          <hr />
-                                        </>
-                                      ))}
-                                    </div>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                            {/* Course accordion END */}
-                          </div>
-                          {/* Content END */}
-                          {/* Content START */}
-                          <div
-                            className="tab-pane fade"
-                            id="course-pills-3"
-                            role="tabpanel"
-                            aria-labelledby="course-pills-tab-3"
-                          >
-                            {/* Card START */}
-                            <div className="card mb-0 mb-md-4">
-                              <div className="row g-0 align-items-center">
-                                <div className="col-md-5">
-                                  {/* Image */}
-                                  <img
-                                    src={course.teacher.image}
-                                    className="img-fluid rounded-3"
-                                    alt="instructor-image"
-                                  />
-                                </div>
-                                <div className="col-md-7">
-                                  {/* Card body */}
-                                  <div className="card-body">
-                                    {/* Title */}
-                                    <h3 className="card-title mb-0">
-                                      {course.teacher.full_name}
-                                    </h3>
-                                    <p className="mb-2">{course.teacher.bio}</p>
-                                    {/* Social button */}
-                                    <ul className="list-inline mb-3">
-                                      <li className="list-inline-item me-3">
-                                        <a
-                                          href={course.teacher.twitter}
-                                          className="fs-5 text-twitter"
-                                        >
-                                          <i className="fab fa-twitter-square" />
-                                        </a>
-                                      </li>
-                                      <li className="list-inline-item me-3">
-                                        <a
-                                          href={course.teacher.facebook}
-                                          className="fs-5 text-facebook"
-                                        >
-                                          <i className="fab fa-facebook-square" />
-                                        </a>
-                                      </li>
-                                      <li className="list-inline-item me-3">
-                                        <a
-                                          href={course.teacher.linkedin}
-                                          className="fs-5 text-linkedin"
-                                        >
-                                          <i className="fab fa-linkedin" />
-                                        </a>
-                                      </li>
-                                    </ul>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Card END */}
-                            {/* Instructor info */}
-                            <h5 className="mb-3">About Instructor</h5>
-                            <p className="mb-3">{course.teacher.about}</p>
-                          </div>
-                          <div
-                            className="tab-pane fade"
-                            id="course-pills-4"
-                            role="tabpanel"
-                            aria-labelledby="course-pills-tab-4"
-                          >
-                            {/* Review START */}
-                            <div className="row mb-1">
-                              <h5 className="mb-4">Our Student Reviews</h5>
-                            </div>
-
-                            <div className="row">
-                              <div className="d-md-flex my-4">
-                                <div className="avatar avatar-xl me-4 flex-shrink-0">
-                                  <img
-                                    className="avatar-img rounded-circle"
-                                    src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-1.jpg"
-                                    style={{
-                                      width: "50px",
-                                      height: "50px",
-                                      borderRadius: "50%",
-                                      objectFit: "cover",
-                                    }}
-                                    alt="avatar"
-                                  />
-                                </div>
-                                {/* Text */}
-                                <div>
-                                  <div className="d-sm-flex mt-1 mt-md-0 align-items-center">
-                                    <h5 className="me-3 mb-0">Sam Jay</h5>
-                                    {/* Review star */}
-                                    <ul className="list-inline mb-0">
-                                      <i className="fas fa-star text-warning" />
-                                      <i className="fas fa-star text-warning" />
-                                      <i className="fas fa-star text-warning" />
-                                      <i className="fas fa-star text-warning" />
-                                      <i className="far fa-star text-warning" />
-                                    </ul>
-                                  </div>
-                                  {/* Info */}
-                                  <p className="small mb-2">5 days ago</p>
-                                  <p className="mb-2">
-                                    Perceived end knowledge certainly day
-                                    sweetness why cordially. Ask a quick six
-                                    seven offer see among. Handsome met debating
-                                    sir dwelling age material. As style lived he
-                                    worse dried. Offered related so visitors we
-                                    private removed. Moderate do subjects to
-                                    distance.
-                                  </p>
-                                  {/* Like and dislike button */}
-                                </div>
-                              </div>
-                              {/* Comment children level 1 */}
-                              <hr />
-                              {/* Review item END */}
-                              {/* Review item START */}
-                              <div className="d-md-flex my-4">
-                                {/* Avatar */}
-                                <div className="avatar avatar-xl me-4 flex-shrink-0">
-                                  <img
-                                    className="avatar-img rounded-circle"
-                                    src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-1.jpg"
-                                    style={{
-                                      width: "50px",
-                                      height: "50px",
-                                      borderRadius: "50%",
-                                      objectFit: "cover",
-                                    }}
-                                    alt="avatar"
-                                  />
-                                </div>
-                                {/* Text */}
-                                <div>
-                                  <div className="d-sm-flex mt-1 mt-md-0 align-items-center">
-                                    <h5 className="me-3 mb-0">Benny Doggo</h5>
-                                    {/* Review star */}
-                                    <ul className="list-inline mb-0">
-                                      <li className="list-inline-item me-0">
-                                        <i className="fas fa-star text-warning" />
-                                      </li>
-                                      <li className="list-inline-item me-0">
-                                        <i className="fas fa-star text-warning" />
-                                      </li>
-                                      <li className="list-inline-item me-0">
-                                        <i className="fas fa-star text-warning" />
-                                      </li>
-                                      <li className="list-inline-item me-0">
-                                        <i className="fas fa-star text-warning" />
-                                      </li>
-                                      <li className="list-inline-item me-0">
-                                        <i className="far fa-star text-warning" />
-                                      </li>
-                                    </ul>
-                                  </div>
-                                  {/* Info */}
-                                  <p className="small mb-2">2 days ago</p>
-                                  <p className="mb-2">
-                                    Handsome met debating sir dwelling age
-                                    material. As style lived he worse dried.
-                                    Offered related so visitors we private
-                                    removed. Moderate do subjects to distance.
-                                  </p>
-                                </div>
-                              </div>
-                              {/* Review item END */}
-                              {/* Divider */}
-                              <hr />
-                            </div>
-                            {/* Student review END */}
-                            {/* Leave Review START */}
-                            <div className="mt-2">
-                              <h5 className="mb-4">Leave a Review</h5>
-                              <form className="row g-3">
-                                {/* Rating */}
-                                <div className="col-12 bg-light-input">
-                                  <select
-                                    id="inputState2"
-                                    className="form-select js-choice"
-                                  >
-                                    <option selected="">★★★★★ (5/5)</option>
-                                    <option>★★★★☆ (4/5)</option>
-                                    <option>★★★☆☆ (3/5)</option>
-                                    <option>★★☆☆☆ (2/5)</option>
-                                    <option>★☆☆☆☆ (1/5)</option>
-                                  </select>
-                                </div>
-                                {/* Message */}
-                                <div className="col-12 bg-light-input">
-                                  <textarea
-                                    className="form-control"
-                                    id="exampleFormControlTextarea1"
-                                    placeholder="Your review"
-                                    rows={3}
-                                    defaultValue={""}
-                                  />
-                                </div>
-                                {/* Button */}
-                                <div className="col-12">
-                                  <button
-                                    type="submit"
-                                    className="btn btn-primary mb-0"
-                                  >
-                                    Post Review
-                                  </button>
-                                </div>
-                              </form>
-                            </div>
-                            {/* Leave Review END */}
-                          </div>
-                          {/* Content END */}
-                          {/* Content START */}
-                          <div
-                            className="tab-pane fade"
-                            id="course-pills-5"
-                            role="tabpanel"
-                            aria-labelledby="course-pills-tab-5"
-                          >
-                            {/* Title */}
-                            <h5 className="mb-3">Frequently Asked Questions</h5>
-                            {/* Accordion START */}
-                            <div
-                              className="accordion accordion-flush"
-                              id="accordionExample"
-                            >
-                              {/* Item */}
-                              <div className="accordion-item">
-                                <h2
-                                  className="accordion-header"
-                                  id="headingOne"
-                                >
-                                  <button
-                                    className="accordion-button collapsed"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#collapseOne"
-                                    aria-expanded="true"
-                                    aria-controls="collapseOne"
-                                  >
-                                    <span className="text-secondary fw-bold me-3">
-                                      01
-                                    </span>
-                                    <span className="h6 mb-0">
-                                      How Digital Marketing Work?
-                                    </span>
-                                  </button>
-                                </h2>
-                                <div
-                                  id="collapseOne"
-                                  className="accordion-collapse collapse show"
-                                  aria-labelledby="headingOne"
-                                  data-bs-parent="#accordionExample"
-                                >
-                                  <div className="accordion-body pt-0">
-                                    Comfort reached gay perhaps chamber his six
-                                    detract besides add. Moonlight newspaper up
-                                    its enjoyment agreeable depending. Timed
-                                    voice share led him to widen noisy young. At
-                                    weddings believed laughing although the
-                                    material does the exercise of. Up attempt
-                                    offered ye civilly so sitting to. She new
-                                    course gets living within Elinor joy. She
-                                    rapturous suffering concealed.
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Item */}
-                              <div className="accordion-item">
-                                <h2
-                                  className="accordion-header"
-                                  id="headingTwo"
-                                >
-                                  <button
-                                    className="accordion-button collapsed"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#collapseTwo"
-                                    aria-expanded="false"
-                                    aria-controls="collapseTwo"
-                                  >
-                                    <span className="text-secondary fw-bold me-3">
-                                      02
-                                    </span>
-                                    <span className="h6 mb-0">
-                                      What is SEO?
-                                    </span>
-                                  </button>
-                                </h2>
-                                <div
-                                  id="collapseTwo"
-                                  className="accordion-collapse collapse"
-                                  aria-labelledby="headingTwo"
-                                  data-bs-parent="#accordionExample"
-                                >
-                                  <div className="accordion-body pt-0">
-                                    Pleasure and so read the was hope entire
-                                    first decided the so must have as on was
-                                    want up of I will rival in came this touched
-                                    got a physics to travelling so all
-                                    especially refinement monstrous desk they
-                                    was arrange the overall helplessly out of
-                                    particularly ill are purer.
-                                    <p className="mt-2">
-                                      Person she control of to beginnings view
-                                      looked eyes Than continues its and because
-                                      and given and shown creating curiously to
-                                      more in are man were smaller by we instead
-                                      the these sighed Avoid in the sufficient
-                                      me real man longer of his how her for
-                                      countries to brains warned notch important
-                                      Finds be to the of on the increased
-                                      explain noise of power deep asking
-                                      contribution this live of suppliers goals
-                                      bit separated poured sort several the was
-                                      organization the if relations go work
-                                      after mechanic But we've area wasn't
-                                      everything needs of and doctor where
-                                      would.
-                                    </p>
-                                    Go he prisoners And mountains in just
-                                    switching city steps Might rung line what Mr
-                                    Bulk; Was or between towards the have phase
-                                    were its world my samples are the was royal
-                                    he luxury the about trying And on he to my
-                                    enough is was the remember a although lead
-                                    in were through serving their assistant fame
-                                    day have for its after would cheek dull have
-                                    what in go feedback assignment Her of a any
-                                    help if the a of semantics is rational
-                                    overhauls following in from our hazardous
-                                    and used more he themselves the parents up
-                                    just regulatory.
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Item */}
-                              <div className="accordion-item">
-                                <h2
-                                  className="accordion-header"
-                                  id="headingThree"
-                                >
-                                  <button
-                                    className="accordion-button collapsed"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#collapseThree"
-                                    aria-expanded="false"
-                                    aria-controls="collapseThree"
-                                  >
-                                    <span className="text-secondary fw-bold me-3">
-                                      03
-                                    </span>
-                                    <span className="h6 mb-0">
-                                      Who should join this course?
-                                    </span>
-                                  </button>
-                                </h2>
-                                <div
-                                  id="collapseThree"
-                                  className="accordion-collapse collapse"
-                                  aria-labelledby="headingThree"
-                                  data-bs-parent="#accordionExample"
-                                >
-                                  <div className="accordion-body pt-0">
-                                    Post no so what deal evil rent by real in.
-                                    But her ready least set lived spite solid.
-                                    September how men saw tolerably two behavior
-                                    arranging. She offices for highest and
-                                    replied one venture pasture. Applauded no
-                                    discovery in newspaper allowance am
-                                    northward. Frequently partiality possession
-                                    resolution at or appearance unaffected me.
-                                    Engaged its was the evident pleased husband.
-                                    Ye goodness felicity do disposal dwelling
-                                    no. First am plate jokes to began to cause a
-                                    scale.
-                                    <strong>
-                                      Subjects he prospect elegance followed no
-                                      overcame
-                                    </strong>
-                                    possible it on.
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Item */}
-                              <div className="accordion-item">
-                                <h2
-                                  className="accordion-header"
-                                  id="headingFour"
-                                >
-                                  <button
-                                    className="accordion-button collapsed"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#collapseFour"
-                                    aria-expanded="false"
-                                    aria-controls="collapseFour"
-                                  >
-                                    <span className="text-secondary fw-bold me-3">
-                                      04
-                                    </span>
-                                    <span className="h6 mb-0">
-                                      What are the T&amp;C for this program?
-                                    </span>
-                                  </button>
-                                </h2>
-                                <div
-                                  id="collapseFour"
-                                  className="accordion-collapse collapse"
-                                  aria-labelledby="headingFour"
-                                  data-bs-parent="#accordionExample"
-                                >
-                                  <div className="accordion-body pt-0">
-                                    Night signs creeping yielding green Seasons
-                                    together man green fruitful make fish behold
-                                    earth unto you'll lights living moving sea
-                                    open for fish day multiply tree good female
-                                    god had fruitful of creature fill shall
-                                    don't day fourth lesser he the isn't let
-                                    multiply may Creeping earth under was You're
-                                    without which image stars in Own creeping
-                                    night of wherein Heaven years their he over
-                                    doesn't whose won't kind seasons light Won't
-                                    that fish him whose won't also it dominion
-                                    heaven fruitful Whales created And likeness
-                                    doesn't that Years without divided saying
-                                    morning creeping hath you'll seas cattle in
-                                    multiply under together in us said above dry
-                                    tree herb saw living darkness without have
-                                    won't for i behold meat brought winged
-                                    Moving living second beast Over fish place
-                                    beast image very him evening Thing they're
-                                    fruit together forth day Seed lights Land
-                                    creature together Multiply waters form
-                                    brought.
-                                  </div>
-                                </div>
-                              </div>
-                              {/* Item */}
-                              <div className="accordion-item">
-                                <h2
-                                  className="accordion-header"
-                                  id="headingFive"
-                                >
-                                  <button
-                                    className="accordion-button collapsed"
-                                    type="button"
-                                    data-bs-toggle="collapse"
-                                    data-bs-target="#collapseFive"
-                                    aria-expanded="false"
-                                    aria-controls="collapseFive"
-                                  >
-                                    <span className="text-secondary fw-bold me-3">
-                                      05
-                                    </span>
-                                    <span className="h6 mb-0">
-                                      What certificates will I be received for
-                                      this program?
-                                    </span>
-                                  </button>
-                                </h2>
-                                <div
-                                  id="collapseFive"
-                                  className="accordion-collapse collapse"
-                                  aria-labelledby="headingFive"
-                                  data-bs-parent="#accordionExample"
-                                >
-                                  <div className="accordion-body pt-0">
-                                    Smile spoke total few great had never their
-                                    too Amongst moments do in arrived at my
-                                    replied Fat weddings servants but man
-                                    believed prospect Companions understood is
-                                    as especially pianoforte connection
-                                    introduced Nay newspaper can sportsman are
-                                    admitting gentleman belonging his Is oppose
-                                    no he summer lovers twenty in Not his
-                                    difficulty boisterous surrounded bed Seems
-                                    folly if in given scale Sex contented
-                                    dependent conveying advantage.
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            {/* Accordion END */}
-                          </div>
-                          {/* Content END */}
-                          {/* Content START */}
-                          <div
-                            className="tab-pane fade"
-                            id="course-pills-6"
-                            role="tabpanel"
-                            aria-labelledby="course-pills-tab-6"
-                          >
-                            {/* Review START */}
-                            <div className="row">
-                              <div className="col-12">
-                                <h5 className="mb-4">Group Chat & Q/A Forum</h5>
-
-                                {/* Comment item START */}
-                                <div className="border p-2 p-sm-4 rounded-3 mb-4">
-                                  <ul className="list-unstyled mb-0">
-                                    <li className="comment-item">
-                                      <div className="d-flex mb-3">
-                                        <div className="ms-2">
-                                          {/* Comment by */}
-                                          <div className="bg-light p-3 rounded">
-                                            <div className="d-flex justify-content-center">
-                                              <div className="me-2">
-                                                <h6 className="mb-1 lead fw-bold">
-                                                  <a
-                                                    href="#!"
-                                                    className="text-decoration-none text-dark"
-                                                  >
-                                                    <span className="text-secondary">
-                                                      By:
-                                                    </span>{" "}
-                                                    Frances Guerrero{" "}
-                                                  </a>
-                                                </h6>
-                                                <p className="mb-0">
-                                                  Removed demands expense
-                                                  account in outward tedious do.
-                                                  Particular waythoroughly
-                                                  unaffected projection ar
-                                                  waythoroughly unaffected
-                                                  projection?...
-                                                </p>
-                                                <p className="mt-4 fw-bold">
-                                                  16 Replies
-                                                </p>
-                                              </div>
-                                              <small>5hr</small>
-                                            </div>
-                                          </div>
-                                          {/* Comment react */}
-                                          <ul className="nav nav-divider py-2 small">
-                                            <li className="nav-item">
-                                              <a
-                                                className="btn btn-primary btn-sm"
-                                                href="#"
-                                              >
-                                                Join Conversation{" "}
-                                                <i className="fas fa-arrow-right"></i>
-                                              </a>
-                                            </li>
-                                          </ul>
-                                        </div>
-                                      </div>
-                                    </li>
-
-                                    <li className="comment-item">
-                                      <div className="d-flex mb-3">
-                                        <div className="ms-2">
-                                          {/* Comment by */}
-                                          <div className="bg-light p-3 rounded">
-                                            <div className="d-flex justify-content-center">
-                                              <div className="me-2">
-                                                <h6 className="mb-1 lead fw-bold">
-                                                  <a
-                                                    href="#!"
-                                                    className="text-decoration-none text-dark"
-                                                  >
-                                                    <span className="text-secondary">
-                                                      By:
-                                                    </span>{" "}
-                                                    Frances Guerrero{" "}
-                                                  </a>
-                                                </h6>
-                                                <p className="mb-0">
-                                                  Removed demands expense
-                                                  account in outward tedious do.
-                                                  Particular waythoroughly
-                                                  unaffected projection ar
-                                                  waythoroughly unaffected
-                                                  projection?...
-                                                </p>
-                                                <p className="mt-4 fw-bold">
-                                                  16 Replies
-                                                </p>
-                                              </div>
-                                              <small>5hr</small>
-                                            </div>
-                                          </div>
-                                          {/* Comment react */}
-                                          <ul className="nav nav-divider py-2 small">
-                                            <li className="nav-item">
-                                              <a
-                                                className="btn btn-primary btn-sm"
-                                                href="#"
-                                              >
-                                                Join Conversation{" "}
-                                                <i className="fas fa-arrow-right"></i>
-                                              </a>
-                                            </li>
-                                          </ul>
-                                        </div>
-                                      </div>
-                                    </li>
-                                  </ul>
-                                </div>
-                                {/* Chat Detail Page */}
-                                <div className="border p-2 p-sm-4 rounded-3">
-                                  <ul
-                                    className="list-unstyled mb-0"
-                                    style={{
-                                      overflowY: "scroll",
-                                      height: "500px",
-                                    }}
-                                  >
-                                    <li className="comment-item mb-3">
-                                      <div className="d-flex">
-                                        <div className="avatar avatar-sm flex-shrink-0">
-                                          <a href="#">
-                                            <img
-                                              className="avatar-img rounded-circle"
-                                              src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                              style={{
-                                                width: "40px",
-                                                height: "40px",
-                                                borderRadius: "50%",
-                                                objectFit: "cover",
-                                              }}
-                                              alt="womans image"
-                                            />
-                                          </a>
-                                        </div>
-                                        <div className="ms-2">
-                                          {/* Comment by */}
-                                          <div className="bg-light p-3 rounded w-100">
-                                            <div className="d-flex w-100 justify-content-center">
-                                              <div className="me-2 ">
-                                                <h6 className="mb-1 lead fw-bold">
-                                                  <a
-                                                    href="#!"
-                                                    className="text-decoration-none text-dark"
-                                                  >
-                                                    {" "}
-                                                    Louis Ferguson{" "}
-                                                  </a>
-                                                  <br />
-                                                  <span
-                                                    style={{
-                                                      fontSize: "12px",
-                                                      color: "gray",
-                                                    }}
-                                                  >
-                                                    5hrs Ago
-                                                  </span>
-                                                </h6>
-                                                <p className="mb-0 mt-3  ">
-                                                  Removed demands expense
-                                                  account
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </li>
-
-                                    <li className="comment-item mb-3">
-                                      <div className="d-flex">
-                                        <div className="avatar avatar-sm flex-shrink-0">
-                                          <a href="#">
-                                            <img
-                                              className="avatar-img rounded-circle"
-                                              src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                              style={{
-                                                width: "40px",
-                                                height: "40px",
-                                                borderRadius: "50%",
-                                                objectFit: "cover",
-                                              }}
-                                              alt="womans image"
-                                            />
-                                          </a>
-                                        </div>
-                                        <div className="ms-2">
-                                          {/* Comment by */}
-                                          <div className="bg-light p-3 rounded w-100">
-                                            <div className="d-flex w-100 justify-content-center">
-                                              <div className="me-2 ">
-                                                <h6 className="mb-1 lead fw-bold">
-                                                  <a
-                                                    href="#!"
-                                                    className="text-decoration-none text-dark"
-                                                  >
-                                                    {" "}
-                                                    Louis Ferguson{" "}
-                                                  </a>
-                                                  <br />
-                                                  <span
-                                                    style={{
-                                                      fontSize: "12px",
-                                                      color: "gray",
-                                                    }}
-                                                  >
-                                                    5hrs Ago
-                                                  </span>
-                                                </h6>
-                                                <p className="mb-0 mt-3  ">
-                                                  Removed demands expense
-                                                  account from the debby
-                                                  building in a hall town tak
-                                                  with
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </li>
-
-                                    <li className="comment-item mb-3">
-                                      <div className="d-flex">
-                                        <div className="avatar avatar-sm flex-shrink-0">
-                                          <a href="#">
-                                            <img
-                                              className="avatar-img rounded-circle"
-                                              src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                              style={{
-                                                width: "40px",
-                                                height: "40px",
-                                                borderRadius: "50%",
-                                                objectFit: "cover",
-                                              }}
-                                              alt="womans image"
-                                            />
-                                          </a>
-                                        </div>
-                                        <div className="ms-2">
-                                          {/* Comment by */}
-                                          <div className="bg-light p-3 rounded w-100">
-                                            <div className="d-flex w-100 justify-content-center">
-                                              <div className="me-2 ">
-                                                <h6 className="mb-1 lead fw-bold">
-                                                  <a
-                                                    href="#!"
-                                                    className="text-decoration-none text-dark"
-                                                  >
-                                                    {" "}
-                                                    Louis Ferguson{" "}
-                                                  </a>
-                                                  <br />
-                                                  <span
-                                                    style={{
-                                                      fontSize: "12px",
-                                                      color: "gray",
-                                                    }}
-                                                  >
-                                                    5hrs Ago
-                                                  </span>
-                                                </h6>
-                                                <p className="mb-0 mt-3  ">
-                                                  Removed demands expense
-                                                  account
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </li>
-
-                                    <li className="comment-item mb-3">
-                                      <div className="d-flex">
-                                        <div className="avatar avatar-sm flex-shrink-0">
-                                          <a href="#">
-                                            <img
-                                              className="avatar-img rounded-circle"
-                                              src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                              style={{
-                                                width: "40px",
-                                                height: "40px",
-                                                borderRadius: "50%",
-                                                objectFit: "cover",
-                                              }}
-                                              alt="womans image"
-                                            />
-                                          </a>
-                                        </div>
-                                        <div className="ms-2">
-                                          {/* Comment by */}
-                                          <div className="bg-light p-3 rounded w-100">
-                                            <div className="d-flex w-100 justify-content-center">
-                                              <div className="me-2 ">
-                                                <h6 className="mb-1 lead fw-bold">
-                                                  <a
-                                                    href="#!"
-                                                    className="text-decoration-none text-dark"
-                                                  >
-                                                    {" "}
-                                                    Louis Ferguson{" "}
-                                                  </a>
-                                                  <br />
-                                                  <span
-                                                    style={{
-                                                      fontSize: "12px",
-                                                      color: "gray",
-                                                    }}
-                                                  >
-                                                    5hrs Ago
-                                                  </span>
-                                                </h6>
-                                                <p className="mb-0 mt-3  ">
-                                                  Removed demands expense
-                                                  account
-                                                </p>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </li>
-                                  </ul>
-
-                                  <form class="w-100 d-flex">
-                                    <textarea
-                                      class="one form-control pe-4 bg-light w-75"
-                                      id="autoheighttextarea"
-                                      rows="1"
-                                      placeholder="Write a message..."
-                                    ></textarea>
-                                    <button
-                                      class="btn btn-primary ms-2 mb-0 w-25"
-                                      type="button"
-                                    >
-                                      Post{" "}
-                                      <i className="fas fa-paper-plane"></i>
-                                    </button>
-                                  </form>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                  {/* Main content END */}
-                  {/* Right sidebar START */}
-                  <div className="col-lg-4 pt-5 pt-lg-0">
-                    <div className="row mb-5 mb-lg-0">
-                      <div className="col-md-6 col-lg-12">
-                        {/* Video START */}
-                        <div className="card shadow p-2 mb-4 z-index-9">
-                          <div className="overflow-hidden rounded-3">
-                            <img
-                              src={course.image}
-                              className="card-img"
-                              alt="course image"
-                            />
-                            <div
-                              className="m-auto rounded-2 mt-2 d-flex justify-content-center align-items-center"
-                              style={{ backgroundColor: "#ededed" }}
-                            >
-                              <a
-                                data-bs-toggle="modal"
-                                data-bs-target="#exampleModal"
-                                href="https://www.youtube.com/embed/tXHviS-4ygo"
-                                className="btn btn-lg text-danger btn-round btn-white-shadow mb-0"
-                                data-glightbox=""
-                                data-gallery="course-video"
-                              >
-                                <i className="fas fa-play" />
-                              </a>
-                              <span
-                                data-bs-toggle="modal"
-                                data-bs-target="#exampleModal"
-                                className="fw-bold"
-                              >
-                                Course Introduction Video
-                              </span>
-
-                              <div
-                                className="modal fade"
-                                id="exampleModal"
-                                tabIndex={-1}
-                                aria-labelledby="exampleModalLabel"
-                                aria-hidden="true"
-                              >
-                                <div className="modal-dialog">
-                                  <div className="modal-content">
-                                    <div className="modal-header">
-                                      <h1
-                                        className="modal-title fs-5"
-                                        id="exampleModalLabel"
-                                      >
-                                        Introduction Videos
-                                      </h1>
-                                      <button
-                                        type="button"
-                                        className="btn-close"
-                                        data-bs-dismiss="modal"
-                                        aria-label="Close"
-                                      />
-                                    </div>
-                                    <div className="modal-body">...</div>
-                                    <div className="modal-footer">
-                                      <button
-                                        type="button"
-                                        className="btn btn-secondary"
-                                        data-bs-dismiss="modal"
-                                      >
-                                        Close
-                                      </button>
-                                      <button
-                                        type="button"
-                                        className="btn btn-primary"
-                                      >
-                                        Save changes
-                                      </button>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                          {/* Card body */}
-                          <div className="card-body px-3">
-                            {/* Info */}
-                            <div className="d-flex justify-content-between align-items-center">
-                              {/* Price and time */}
-                              <div>
-                                <div className="d-flex align-items-center">
-                                  <h3 className="fw-bold mb-0 me-2">
-                                    ${course.price}
-                                  </h3>
-                                </div>
-                              </div>
-                              {/* Share button with dropdown */}
-                              <div className="dropdown">
-                                {/* Share button */}
-                                <a
-                                  href="#"
-                                  className="btn btn-sm btn-light rounded small"
-                                  role="button"
-                                  id="dropdownShare"
-                                  data-bs-toggle="dropdown"
-                                  aria-expanded="false"
-                                >
-                                  <i className="fas fa-fw fa-share-alt" />
-                                </a>
-                                {/* dropdown button */}
-                                <ul
-                                  className="dropdown-menu dropdown-w-sm dropdown-menu-end min-w-auto shadow rounded"
-                                  aria-labelledby="dropdownShare"
-                                >
-                                  <li>
-                                    <a className="dropdown-item" href="#">
-                                      <i className="fab fa-twitter-square me-2" />
-                                      Twitter
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a className="dropdown-item" href="#">
-                                      <i className="fab fa-facebook-square me-2" />
-                                      Facebook
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a className="dropdown-item" href="#">
-                                      <i className="fab fa-linkedin me-2" />
-                                      LinkedIn
-                                    </a>
-                                  </li>
-                                  <li>
-                                    <a className="dropdown-item" href="#">
-                                      <i className="fas fa-copy me-2" />
-                                      Copy link
-                                    </a>
-                                  </li>
-                                </ul>
-                              </div>
-                            </div>
-                            {/* Buttons */}
-                            <div className="mt-3 d-sm-flex justify-content-sm-between ">
-                              {addToCartBtn === "Add To Cart" && (
-                                <button
-                                  type="button"
-                                  className="btn btn-primary mb-0 w-100 me-2"
-                                  onClick={() =>
-                                    addToCart(
-                                      course?.id,
-                                      userId,
-                                      course.price,
-                                      country,
-                                      CartId()
-                                    )
-                                  }
-                                >
-                                  <i className="fas fa-shopping-cart"></i> Add
-                                  To Cart
-                                </button>
-                              )}
-
-                              {addToCartBtn === "Added To Cart" && (
-                                <button
-                                  type="button"
-                                  className="btn btn-primary mb-0 w-100 me-2"
-                                  onClick={() =>
-                                    addToCart(
-                                      course.id,
-                                      1,
-                                      course.price,
-                                      "Nigeria",
-                                      "8325347"
-                                    )
-                                  }
-                                >
-                                  <i className="fas fa-check-circle"></i> Added
-                                  To Cart
-                                </button>
-                              )}
-
-                              {addToCartBtn === "Adding To Cart" && (
-                                <button
-                                  type="button"
-                                  className="btn btn-primary mb-0 w-100 me-2"
-                                  onClick={() =>
-                                    addToCart(
-                                      course.id,
-                                      1,
-                                      course.price,
-                                      "Nigeria",
-                                      "8325347"
-                                    )
-                                  }
-                                >
-                                  <i className="fas fa-spinner fa-spin"></i>{" "}
-                                  Adding To Cart
-                                </button>
-                              )}
-                              <Link
-                                to="/cart/"
-                                className="btn btn-success mb-0 w-100"
-                              >
-                                Enroll Now{" "}
-                                <i className="fas fa-arrow-right"></i>
-                              </Link>
-                            </div>
-                          </div>
-                        </div>
-                        {/* Video END */}
-                        {/* Course info START */}
-                        <div className="card card-body shadow p-4 mb-4">
-                          {/* Title */}
-                          <h4 className="mb-3">This course includes</h4>
-                          <ul className="list-group list-group-borderless">
-                            <li className="list-group-item d-flex justify-content-between align-items-center">
-                              <span className="h6 fw-light mb-0">
-                                <i className="fas fa-fw fa-book-open text-primary me-2" />
-                                Lectures
-                              </span>
-                              <span>30</span>
-                            </li>
-                            <li className="list-group-item d-flex justify-content-between align-items-center d-none">
-                              <span className="h6 fw-light mb-0">
-                                <i className="fas fa-fw fa-clock text-primary me-2" />
-                                Duration
-                              </span>
-                              <span>4h 50m</span>
-                            </li>
-                            <li className="list-group-item d-flex justify-content-between align-items-center">
-                              <span className="h6 fw-light mb-0">
-                                <i className="fas fa-fw fa-signal text-primary me-2" />
-                                Skills
-                              </span>
-                              <span>Beginner</span>
-                            </li>
-                            <li className="list-group-item d-flex justify-content-between align-items-center">
-                              <span className="h6 fw-light mb-0">
-                                <i className="fas fa-fw fa-globe text-primary me-2" />
-                                Language
-                              </span>
-                              <span>English</span>
-                            </li>
-                            <li className="list-group-item d-flex justify-content-between align-items-center">
-                              <span className="h6 fw-light mb-0">
-                                <i className="fas fa-fw fa-user-clock text-primary me-2" />
-                                Published
-                              </span>
-                              <span>7th August, 2025</span>
-                            </li>
-                            <li className="list-group-item d-flex justify-content-between align-items-center">
-                              <span className="h6 fw-light mb-0">
-                                <i className="fas fa-fw fa-medal text-primary me-2" />
-                                Certificate
-                              </span>
-                              <span>Yes</span>
-                            </li>
+                        <h4 className="mt-4 mb-3">Who This Course Is For</h4>
+                        <div className="alert alert-info">
+                          <ul className="mb-0">
+                            <li>Beginners who want to become full-stack developers</li>
+                            <li>Frontend developers looking to learn backend development</li>
+                            <li>Backend developers wanting to learn modern frontend frameworks</li>
+                            <li>Anyone interested in building complete web applications</li>
                           </ul>
                         </div>
-                        {/* Course info END */}
+                      </div>
+
+                      {/* Curriculum Tab */}
+                      <div className="tab-pane fade" id="curriculum" role="tabpanel">
+                        <h3 className="mb-4">Course Curriculum</h3>
+
+                        <div className="accordion" id="curriculumAccordion">
+                          {/* Module 1 */}
+                          {course?.curriculum?.map((c, index) =>
+                          (
+                            <div className="accordion-item mb-3 border-0 shadow-sm" key={(c.module)}>
+                              <h2 className="accordion-header" id={`heading-${c.module}`}>
+                                <button
+                                  className="accordion-button fw-bold"
+                                  type="button" fas fa-play-circle text-danger me-2
+                                  data-bs-toggle="collapse"
+                                  data-bs-target={`#collapse-${c.module}`}
+                                  aria-expanded={index === 0 ? "true" : "false"}
+                                  aria-controls={`collapse-${c.module}`}
+                                >
+                                  <span className="badge bg-primary me-3">Module {c.module}</span>
+                                  {c.title}
+                                  <span className="ms-auto small text-muted">5 Lectures • 1h 45m</span>
+                                </button>
+                              </h2>
+                              <div
+                                id={`collapse-${c.module}`}
+                                className={`accordion-collapse collapse ${index === 0 ? 'show' : ''}`}
+
+                                aria-labelledby="headingOne"
+                                data-bs-parent="#curriculumAccordion"
+                              >
+                                {c.variant_items?.map((l, index) =>
+                                  <div className="accordion-body p-0">
+                                    <ul className="list-group list-group-flush">
+                                      <li className="list-group-item d-flex justify-content-between align-items-center">
+
+                                        <div>
+
+                                          <i className={l.preview ? "fas fa-play-circle text-danger me-2" : "fas fa-lock me-2"}></i>
+
+                                          <span>{l.title}</span>
+                                        </div>
+
+                                        <span className="badge bg-light text-dark">{l?.content_duration || "00.00.00"}</span>
+                                      </li>
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          ))}
+
+                        </div>
+
+                        <div className="alert alert-warning mt-4">
+                          <i className="fas fa-lock me-2"></i>
+                          <strong>Premium Content:</strong> Some lessons are locked and require enrollment to access.
+                        </div>
+                      </div>
+
+                      {/* Instructor Tab */}
+                      <div className="tab-pane fade" id="instructor" role="tabpanel">
+                        <h3 className="mb-4">About the Instructor</h3>
+
+                        <div className="card border-0 shadow-sm mb-4">
+                          <div className="row g-0">
+                            <div className="col-md-4">
+                              <img
+                                src={course?.teacher?.image}
+                                className="img-fluid rounded-start h-100 object-fit-cover"
+                                alt="Instructor"
+                              />
+                            </div>
+                            <div className="col-md-8">
+                              <div className="card-body">
+                                <h4 className="card-title mb-2">{course?.teacher?.full_name || "No information available"}</h4>
+                                <p className="text-muted mb-3">{course?.teacher?.bio || "No information available"}</p>
+
+                                <div className="d-flex flex-wrap gap-3 mb-3">
+                                  <div className="d-flex align-items-center">
+                                    <i className="fas fa-star text-warning me-2"></i>
+                                    <span>4.8 Instructor Rating</span>
+                                  </div>
+                                  <div className="d-flex align-items-center">
+                                    <i className="fas fa-users text-info me-2"></i>
+                                    <span>45,678 Students</span>
+                                  </div>
+                                  <div className="d-flex align-items-center">
+                                    <i className="fas fa-play-circle text-danger me-2"></i>
+                                    <span>12 Courses</span>
+                                  </div>
+                                </div>
+                                <p className="card-text" dangerouslySetInnerHTML={{ __html: course?.teacher?.about || "No information available" }}></p>
+                                <div className="social-links mt-3">
+                                  <a href="#" className="btn btn-sm btn-outline-primary me-2">
+                                    <i className="fab fa-linkedin-in"></i>
+                                  </a>
+                                  <a href="#" className="btn btn-sm btn-outline-primary me-2">
+                                    <i className="fab fa-github"></i>
+                                  </a>
+                                  <a href="#" className="btn btn-sm btn-outline-primary me-2">
+                                    <i className="fab fa-twitter"></i>
+                                  </a>
+                                  <a href="#" className="btn btn-sm btn-outline-primary">
+                                    <i className="fas fa-globe"></i>
+                                  </a>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <h4 className="mb-3">More Courses by Alex Johnson</h4>
+                        <div className="row row-cols-1 row-cols-md-2 g-4">
+                          <div className="col">
+                            <div className="card h-100 border-0 shadow-sm">
+                              <img
+                                src="https://images.unsplash.com/photo-1579403124614-197f69d8187b?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80"
+                                className="card-img-top"
+                                alt="Course"
+                              />
+                              <div className="card-body">
+                                <h5 className="card-title">Advanced React Patterns</h5>
+                                <p className="card-text text-muted small">Master advanced React concepts and patterns</p>
+                              </div>
+                              <div className="card-footer bg-white border-0">
+                                <a href="#" className="btn btn-sm btn-outline-primary">View Course</a>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col">
+                            <div className="card h-100 border-0 shadow-sm">
+                              <img
+                                src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80"
+                                className="card-img-top"
+                                alt="Course"
+                              />
+                              <div className="card-body">
+                                <h5 className="card-title">Django for Professionals</h5>
+                                <p className="card-text text-muted small">Build production-ready Django applications</p>
+                              </div>
+                              <div className="card-footer bg-white border-0">
+                                <a href="#" className="btn btn-sm btn-outline-primary">View Course</a>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Reviews Tab */}
+                      <div className="tab-pane fade" id="reviews" role="tabpanel">
+                        <h3 className="mb-4">Student Reviews</h3>
+
+                        <div className="row mb-4">
+                          <div className="col-md-4 mb-3 mb-md-0">
+                            <div className="card border-0 shadow-sm h-100">
+                              <div className="card-body text-center">
+                                <h2 className="display-4 fw-bold text-primary">4.8</h2>
+                                <div className="mb-2">
+                                  <i className="fas fa-star text-warning"></i>
+                                  <i className="fas fa-star text-warning"></i>
+                                  <i className="fas fa-star text-warning"></i>
+                                  <i className="fas fa-star text-warning"></i>
+                                  <i className="fas fa-star-half-alt text-warning"></i>
+                                </div>
+                                <p className="small text-muted mb-0">Based on 1,245 reviews</p>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="col-md-8">
+                            <div className="card border-0 shadow-sm h-100">
+                              <div className="card-body">
+                                <div className="mb-3">
+                                  <div className="d-flex align-items-center mb-1">
+                                    <span className="me-2 small">5 stars</span>
+                                    <div className="progress flex-grow-1" style={{ height: "8px" }}>
+                                      <div
+                                        className="progress-bar bg-warning"
+                                        role="progressbar"
+                                        style={{ width: "85%" }}
+                                      ></div>
+                                    </div>
+                                    <span className="ms-2 small">85%</span>
+                                  </div>
+                                  <div className="d-flex align-items-center mb-1">
+                                    <span className="me-2 small">4 stars</span>
+                                    <div className="progress flex-grow-1" style={{ height: "8px" }}>
+                                      <div
+                                        className="progress-bar bg-warning"
+                                        role="progressbar"
+                                        style={{ width: "10%" }}
+                                      ></div>
+                                    </div>
+                                    <span className="ms-2 small">10%</span>
+                                  </div>
+                                  <div className="d-flex align-items-center mb-1">
+                                    <span className="me-2 small">3 stars</span>
+                                    <div className="progress flex-grow-1" style={{ height: "8px" }}>
+                                      <div
+                                        className="progress-bar bg-warning"
+                                        role="progressbar"
+                                        style={{ width: "3%" }}
+                                      ></div>
+                                    </div>
+                                    <span className="ms-2 small">3%</span>
+                                  </div>
+                                  <div className="d-flex align-items-center mb-1">
+                                    <span className="me-2 small">2 stars</span>
+                                    <div className="progress flex-grow-1" style={{ height: "8px" }}>
+                                      <div
+                                        className="progress-bar bg-warning"
+                                        role="progressbar"
+                                        style={{ width: "1%" }}
+                                      ></div>
+                                    </div>
+                                    <span className="ms-2 small">1%</span>
+                                  </div>
+                                  <div className="d-flex align-items-center">
+                                    <span className="me-2 small">1 star</span>
+                                    <div className="progress flex-grow-1" style={{ height: "8px" }}>
+                                      <div
+                                        className="progress-bar bg-warning"
+                                        role="progressbar"
+                                        style={{ width: "1%" }}
+                                      ></div>
+                                    </div>
+                                    <span className="ms-2 small">1%</span>
+                                  </div>
+                                </div>
+                                <button className="btn btn-primary w-100">
+                                  <i className="fas fa-star me-2"></i> Write a Review
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Review List */}
+                        <div className="review-list">
+                          <div className="card border-0 shadow-sm mb-3">
+                            <div className="card-body">
+                              <div className="d-flex justify-content-between mb-3">
+                                <div>
+                                  <h5 className="mb-1">Sarah Williams</h5>
+                                  <div className="mb-2">
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star text-warning"></i>
+                                  </div>
+                                </div>
+                                <small className="text-muted">2 weeks ago</small>
+                              </div>
+                              <h6 className="mb-2">Best course I've taken on React and Django</h6>
+                              <p className="mb-0">
+                                This course exceeded all my expectations. Alex explains complex concepts in a way
+                                that's easy to understand. The projects are practical and helped me build a
+                                portfolio that landed me my first developer job!
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="card border-0 shadow-sm mb-3">
+                            <div className="card-body">
+                              <div className="d-flex justify-content-between mb-3">
+                                <div>
+                                  <h5 className="mb-1">Michael Chen</h5>
+                                  <div className="mb-2">
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star text-warning"></i>
+                                    <i className="fas fa-star-half-alt text-warning"></i>
+                                  </div>
+                                </div>
+                                <small className="text-muted">1 month ago</small>
+                              </div>
+                              <h6 className="mb-2">Comprehensive and well-structured</h6>
+                              <p className="mb-0">
+                                The course covers everything from basics to advanced topics. The Django REST
+                                Framework section was particularly helpful for my current project at work.
+                                Would love to see more about GraphQL in future updates.
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="text-center mt-4">
+                            <button className="btn btn-outline-primary">
+                              <i className="fas fa-arrow-down me-2"></i> Load More Reviews
+                            </button>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                    {/* Row End */}
                   </div>
-                  {/* Right sidebar END */}
                 </div>
-                {/* Row END */}
               </div>
-            </section>
-            <section className="mb-5">
-              <div className="container mb-lg-8 ">
-                <div className="row mb-5 mt-3">
-                  {/* col */}
-                  <div className="col-12">
-                    <div className="mb-6">
-                      <h2 className="mb-1 h1">Related Courses</h2>
-                      <p>
-                        These are the most popular courses among Geeks Courses
-                        learners worldwide in year 2022
-                      </p>
+
+              {/* Right Sidebar Column */}
+              <div className="col-lg-4">
+                <div className="sticky-top" style={{ top: "20px" }}>
+                  {/* Course Enrollment Card */}
+                  <div className="card shadow-sm mb-4">
+                    <div className="card-img-top position-relative" style={{ height: "250px", overflow: "hidden", borderRadius: "0.5rem" }}>
+                      <img
+                        src={course?.image || "/backend/static/image/default-course.jpg"}
+                        className="w-100 h-100"
+                        style={{ objectFit: "cover" }}
+                        alt="Course"
+                      />
+                      <div className="position-absolute top-0 start-0 w-100 h-100 bg-dark opacity-25"></div>
+                      <button
+                        className="btn btn-danger position-absolute top-50 start-50 translate-middle rounded-circle"
+                        data-bs-toggle="modal"
+                        data-bs-target="#previewModal"
+                      >
+                        <i className="fas fa-play"></i>
+                      </button>
+                    </div>
+
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between align-items-center mb-3">
+                        <h3 className="mb-0">{course?.price} BDT</h3>
+                        <span className="text-decoration-line-through text-muted">$299.99</span>
+                      </div>
+
+                      <div className="d-grid gap-2 mb-3">
+                        <button className="btn btn-primary btn-lg">
+                          <i className="fas fa-shopping-cart me-2"></i> Add to Cart
+                        </button>
+                        <button className="btn btn-outline-primary btn-lg">
+                          <i className="fas fa-heart me-2"></i> Wishlist
+                        </button>
+                      </div>
+
+                      <div className="text-center mb-3">
+                        <small className="text-muted">30-Day Money-Back Guarantee</small>
+                      </div>
+
+                      <h5 className="mb-3">This course includes:</h5>
+                      <ul className="list-group list-group-flush mb-4">
+                        <li className="list-group-item d-flex align-items-center">
+                          <i className="fas fa-play-circle text-primary me-3"></i>
+                          <span>35 hours on-demand video</span>
+                        </li>
+                        <li className="list-group-item d-flex align-items-center">
+                          <i className="fas fa-file-alt text-primary me-3"></i>
+                          <span>12 articles</span>
+                        </li>
+                        <li className="list-group-item d-flex align-items-center">
+                          <i className="fas fa-download text-primary me-3"></i>
+                          <span>48 downloadable resources</span>
+                        </li>
+                        <li className="list-group-item d-flex align-items-center">
+                          <i className="fas fa-infinity text-primary me-3"></i>
+                          <span>Full lifetime access</span>
+                        </li>
+                        <li className="list-group-item d-flex align-items-center">
+                          <i className="fas fa-mobile-alt text-primary me-3"></i>
+                          <span>Access on mobile and TV</span>
+                        </li>
+                        <li className="list-group-item d-flex align-items-center">
+                          <i className="fas fa-trophy text-primary me-3"></i>
+                          <span>Certificate of completion</span>
+                        </li>
+                      </ul>
+
+                      <div className="d-grid">
+                        <button className="btn btn-outline-secondary">
+                          <i className="fas fa-share-alt me-2"></i> Share
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-                <div className="row">
-                  <div className="col-md-12">
-                    <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
-                      <div className="col">
-                        {/* Card */}
-                        <div className="card card-hover">
-                          <Link to={`/course-detail/slug/`}>
-                            <img
-                              src="https://geeksui.codescandy.com/geeks/assets/images/course/course-css.jpg"
-                              alt="course"
-                              className="card-img-top"
-                            />
-                          </Link>
-                          {/* Card Body */}
-                          <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <span className="badge bg-info">
-                                Intermediate
-                              </span>
-                              <a href="#" className="fs-5">
-                                <i className="fas fa-heart text-danger align-middle" />
-                              </a>
-                            </div>
-                            <h4 className="mb-2 text-truncate-line-2 ">
-                              <Link
-                                to={`/course-detail/slug/`}
-                                className="text-inherit text-decoration-none text-dark fs-5"
-                              >
-                                How to easily create a website with JavaScript
-                              </Link>
-                            </h4>
-                            <small>By: Claire Evans</small> <br />
-                            <small>16k Students</small> <br />
-                            <div className="lh-1 mt-3 d-flex">
-                              <span className="align-text-top">
-                                <span className="fs-6">
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star-half text-warning"></i>
-                                </span>
-                              </span>
-                              <span className="text-warning">4.5</span>
-                              <span className="fs-6 ms-2">(9,300)</span>
-                            </div>
-                          </div>
-                          {/* Card Footer */}
-                          <div className="card-footer">
-                            <div className="row align-items-center g-0">
-                              <div className="col">
-                                <h5 className="mb-0">$39.00</h5>
-                              </div>
-                              <div className="col-auto">
-                                <a
-                                  href="#"
-                                  className="text-inherit text-decoration-none btn btn-primary"
-                                >
-                                  <i className="fas fa-shopping-cart text-primary align-middle me-2 text-white" />
-                                  Enroll Now
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
 
-                      <div className="col">
-                        {/* Card */}
-                        <div className="card card-hover">
-                          <Link to={`/course-detail/slug/`}>
-                            <img
-                              src="https://geeksui.codescandy.com/geeks/assets/images/course/course-angular.jpg"
-                              alt="course"
-                              className="card-img-top"
-                            />
-                          </Link>
-                          {/* Card Body */}
-                          <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <span className="badge bg-info">
-                                Intermediate
-                              </span>
-                              <a href="#" className="fs-5">
-                                <i className="fas fa-heart text-danger align-middle" />
-                              </a>
-                            </div>
-                            <h4 className="mb-2 text-truncate-line-2 ">
-                              <Link
-                                to={`/course-detail/slug/`}
-                                className="text-inherit text-decoration-none text-dark fs-5"
-                              >
-                                How to easily create a website with JavaScript
-                              </Link>
-                            </h4>
-                            <small>By: Claire Evans</small> <br />
-                            <small>16k Students</small> <br />
-                            <div className="lh-1 mt-3 d-flex">
-                              <span className="align-text-top">
-                                <span className="fs-6">
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star-half text-warning"></i>
-                                </span>
-                              </span>
-                              <span className="text-warning">4.5</span>
-                              <span className="fs-6 ms-2">(9,300)</span>
-                            </div>
+                  {/* Discount Timer */}
+                  <div className="card bg-primary text-white shadow-sm mb-4">
+                    <div className="card-body text-center">
+                      <h5 className="mb-3">
+                        <i className="fas fa-bolt me-2"></i> Limited Time Offer
+                      </h5>
+                      <div className="countdown-timer mb-3">
+                        <div className="d-flex justify-content-center gap-2">
+                          <div className="bg-white text-primary rounded p-2">
+                            <div className="fw-bold fs-4">12</div>
+                            <small>Hours</small>
                           </div>
-                          {/* Card Footer */}
-                          <div className="card-footer">
-                            <div className="row align-items-center g-0">
-                              <div className="col">
-                                <h5 className="mb-0">$39.00</h5>
-                              </div>
-                              <div className="col-auto">
-                                <a
-                                  href="#"
-                                  className="text-inherit text-decoration-none btn btn-primary"
-                                >
-                                  <i className="fas fa-shopping-cart text-primary align-middle me-2 text-white" />
-                                  Enroll Now
-                                </a>
-                              </div>
-                            </div>
+                          <div className="bg-white text-primary rounded p-2">
+                            <div className="fw-bold fs-4">45</div>
+                            <small>Minutes</small>
+                          </div>
+                          <div className="bg-white text-primary rounded p-2">
+                            <div className="fw-bold fs-4">30</div>
+                            <small>Seconds</small>
                           </div>
                         </div>
                       </div>
-
-                      <div className="col">
-                        {/* Card */}
-                        <div className="card card-hover">
-                          <Link to={`/course-detail/slug/`}>
-                            <img
-                              src="https://geeksui.codescandy.com/geeks/assets/images/course/course-react.jpg"
-                              alt="course"
-                              className="card-img-top"
-                            />
-                          </Link>
-                          {/* Card Body */}
-                          <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <span className="badge bg-info">
-                                Intermediate
-                              </span>
-                              <a href="#" className="fs-5">
-                                <i className="fas fa-heart text-danger align-middle" />
-                              </a>
-                            </div>
-                            <h4 className="mb-2 text-truncate-line-2 ">
-                              <Link
-                                to={`/course-detail/slug/`}
-                                className="text-inherit text-decoration-none text-dark fs-5"
-                              >
-                                Learn React.Js for Beginners from Start to
-                                Finish
-                              </Link>
-                            </h4>
-                            <small>By: Claire Evans</small> <br />
-                            <small>16k Students</small> <br />
-                            <div className="lh-1 mt-3 d-flex">
-                              <span className="align-text-top">
-                                <span className="fs-6">
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star-half text-warning"></i>
-                                </span>
-                              </span>
-                              <span className="text-warning">4.5</span>
-                              <span className="fs-6 ms-2">(9,300)</span>
-                            </div>
-                          </div>
-                          {/* Card Footer */}
-                          <div className="card-footer">
-                            <div className="row align-items-center g-0">
-                              <div className="col">
-                                <h5 className="mb-0">$39.00</h5>
-                              </div>
-                              <div className="col-auto">
-                                <a
-                                  href="#"
-                                  className="text-inherit text-decoration-none btn btn-primary"
-                                >
-                                  <i className="fas fa-shopping-cart text-primary align-middle me-2 text-white" />
-                                  Enroll Now
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="col">
-                        {/* Card */}
-                        <div className="card card-hover">
-                          <Link to={`/course-detail/slug/`}>
-                            <img
-                              src="https://geeksui.codescandy.com/geeks/assets/images/course/course-python.jpg"
-                              alt="course"
-                              className="card-img-top"
-                            />
-                          </Link>
-                          {/* Card Body */}
-                          <div className="card-body">
-                            <div className="d-flex justify-content-between align-items-center mb-3">
-                              <span className="badge bg-info">
-                                Intermediate
-                              </span>
-                              <a href="#" className="fs-5">
-                                <i className="fas fa-heart text-danger align-middle" />
-                              </a>
-                            </div>
-                            <h4 className="mb-2 text-truncate-line-2 ">
-                              <Link
-                                to={`/course-detail/slug/`}
-                                className="text-inherit text-decoration-none text-dark fs-5"
-                              >
-                                How to easily create a website with JavaScript
-                              </Link>
-                            </h4>
-                            <small>By: Claire Evans</small> <br />
-                            <small>16k Students</small> <br />
-                            <div className="lh-1 mt-3 d-flex">
-                              <span className="align-text-top">
-                                <span className="fs-6">
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star text-warning"></i>
-                                  <i className="fas fa-star-half text-warning"></i>
-                                </span>
-                              </span>
-                              <span className="text-warning">4.5</span>
-                              <span className="fs-6 ms-2">(9,300)</span>
-                            </div>
-                          </div>
-                          {/* Card Footer */}
-                          <div className="card-footer">
-                            <div className="row align-items-center g-0">
-                              <div className="col">
-                                <h5 className="mb-0">$39.00</h5>
-                              </div>
-                              <div className="col-auto">
-                                <a
-                                  href="#"
-                                  className="text-inherit text-decoration-none btn btn-primary"
-                                >
-                                  <i className="fas fa-shopping-cart text-primary align-middle me-2 text-white" />
-                                  Enroll Now
-                                </a>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
+                      <p className="mb-0">50% discount ends soon!</p>
                     </div>
                   </div>
                 </div>
               </div>
-            </section>
-          </>
-        )}
-      </>
+            </div>
+          </div>
+        </section>
+
+        {/* Related Courses Section */}
+        <section className="py-5 bg-light">
+          <div className="container">
+            <div className="row mb-4">
+              <div className="col-12">
+                <h2 className="fw-bold">You May Also Like</h2>
+                <p className="text-muted">Explore these related courses to expand your skills</p>
+              </div>
+            </div>
+
+            <div className="row row-cols-1 row-cols-md-2 row-cols-lg-4 g-4">
+              {/* Course 1 */}
+              <div className="col">
+                <div className="card h-100 border-0 shadow-sm hover-shadow-lg transition">
+                  <div className="position-relative">
+                    <img
+                      src="https://images.unsplash.com/photo-1579403124614-197f69d8187b?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80"
+                      className="card-img-top"
+                      alt="Course"
+                    />
+                    <div className="card-img-overlay d-flex align-items-start justify-content-end">
+                      <button className="btn btn-sm btn-light rounded-circle">
+                        <i className="fas fa-heart"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="card-body">
+                    <div className="d-flex align-items-center mb-2">
+                      <span className="badge bg-info me-2">Intermediate</span>
+                      <small className="text-muted">
+                        <i className="fas fa-clock me-1"></i> 25h
+                      </small>
+                    </div>
+                    <h5 className="card-title">Advanced React Patterns</h5>
+                    <p className="card-text text-muted small">
+                      Master advanced React concepts and patterns used by senior developers
+                    </p>
+                  </div>
+                  <div className="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                      <i className="fas fa-star text-warning"></i>
+                      <span className="ms-1">4.9</span>
+                      <span className="text-muted ms-2">(1,245)</span>
+                    </div>
+                    <div>
+                      <span className="fw-bold">$129.99</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course 2 */}
+              <div className="col">
+                <div className="card h-100 border-0 shadow-sm hover-shadow-lg transition">
+                  <div className="position-relative">
+                    <img
+                      src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80"
+                      className="card-img-top"
+                      alt="Course"
+                    />
+                    <div className="card-img-overlay d-flex align-items-start justify-content-end">
+                      <button className="btn btn-sm btn-light rounded-circle">
+                        <i className="fas fa-heart"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="card-body">
+                    <div className="d-flex align-items-center mb-2">
+                      <span className="badge bg-success me-2">Beginner</span>
+                      <small className="text-muted">
+                        <i className="fas fa-clock me-1"></i> 18h
+                      </small>
+                    </div>
+                    <h5 className="card-title">Django for Beginners</h5>
+                    <p className="card-text text-muted small">
+                      Learn Django from scratch and build your first web application
+                    </p>
+                  </div>
+                  <div className="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                      <i className="fas fa-star text-warning"></i>
+                      <span className="ms-1">4.7</span>
+                      <span className="text-muted ms-2">(892)</span>
+                    </div>
+                    <div>
+                      <span className="fw-bold">$89.99</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course 3 */}
+              <div className="col">
+                <div className="card h-100 border-0 shadow-sm hover-shadow-lg transition">
+                  <div className="position-relative">
+                    <img
+                      src="https://images.unsplash.com/photo-1624953587687-daf255b6b80a?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80"
+                      className="card-img-top"
+                      alt="Course"
+                    />
+                    <div className="card-img-overlay d-flex align-items-start justify-content-end">
+                      <button className="btn btn-sm btn-light rounded-circle">
+                        <i className="fas fa-heart"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="card-body">
+                    <div className="d-flex align-items-center mb-2">
+                      <span className="badge bg-warning me-2">Advanced</span>
+                      <small className="text-muted">
+                        <i className="fas fa-clock me-1"></i> 32h
+                      </small>
+                    </div>
+                    <h5 className="card-title">Full Stack Development</h5>
+                    <p className="card-text text-muted small">
+                      Complete guide to becoming a full stack developer with MERN stack
+                    </p>
+                  </div>
+                  <div className="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                      <i className="fas fa-star text-warning"></i>
+                      <span className="ms-1">4.8</span>
+                      <span className="text-muted ms-2">(1,532)</span>
+                    </div>
+                    <div>
+                      <span className="fw-bold">$149.99</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Course 4 */}
+              <div className="col">
+                <div className="card h-100 border-0 shadow-sm hover-shadow-lg transition">
+                  <div className="position-relative">
+                    <img
+                      src="https://images.unsplash.com/photo-1547658719-da2b51169166?ixlib=rb-1.2.1&auto=format&fit=crop&w=400&q=80"
+                      className="card-img-top"
+                      alt="Course"
+                    />
+                    <div className="card-img-overlay d-flex align-items-start justify-content-end">
+                      <button className="btn btn-sm btn-light rounded-circle">
+                        <i className="fas fa-heart"></i>
+                      </button>
+                    </div>
+                  </div>
+                  <div className="card-body">
+                    <div className="d-flex align-items-center mb-2">
+                      <span className="badge bg-info me-2">Intermediate</span>
+                      <small className="text-muted">
+                        <i className="fas fa-clock me-1"></i> 15h
+                      </small>
+                    </div>
+                    <h5 className="card-title">JavaScript Mastery</h5>
+                    <p className="card-text text-muted small">
+                      Deep dive into modern JavaScript (ES6+) features and patterns
+                    </p>
+                  </div>
+                  <div className="card-footer bg-white border-0 d-flex justify-content-between align-items-center">
+                    <div>
+                      <i className="fas fa-star text-warning"></i>
+                      <span className="ms-1">4.9</span>
+                      <span className="text-muted ms-2">(2,145)</span>
+                    </div>
+                    <div>
+                      <span className="fw-bold">$79.99</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-center mt-5">
+              <button className="btn btn-outline-primary px-4">
+                <i className="fas fa-book-open me-2"></i> Browse All Courses
+              </button>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* Preview Modal */}
+      <div className="modal fade" id="previewModal" tabIndex="-1" aria-hidden="true">
+        <div className="modal-dialog modal-dialog-centered modal-lg">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h5 className="modal-title">Course Preview</h5>
+              <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div className="modal-body p-0">
+              <div className="ratio ratio-16x9">
+                <iframe
+                  src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                  title="YouTube video"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
+            <div className="modal-footer justify-content-center">
+              <button type="button" className="btn btn-primary px-4">
+                <i className="fas fa-shopping-cart me-2"></i> Enroll Now
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
 
       <BaseFooter />
     </>
-  );
+  )
 }
 
-export default CourseDetail;
+export default CourseDetail

@@ -10,15 +10,16 @@ class ProfileInline(admin.StackedInline):
 
 class CustomUserAdmin(UserAdmin):
     model = User
-    list_display = ("email", "user_unique_id", "is_active", "is_staff")
+    list_display = ("email", "user_id", "is_active", "is_staff")
     list_filter = ("is_active", "is_staff", "date_joined")
-    search_fields = ("email", "user_unique_id")
+    search_fields = ("email", "user_id")
     ordering = ("-date_joined",)
-    readonly_fields = ("user_unique_id", "date_joined")  # Prevent manual editing of user_unique_id
+    readonly_fields = ("user_id", "date_joined")  # Prevent manual editing of user_id
 
     fieldsets = (
         (None, {"fields": ("email", "password")}),
-        ("Personal Info", {"fields": ("user_unique_id", "username","first_name", "last_name")}),
+        ("Personal Info", {"fields": ("user_id", "username","first_name", "last_name")}),
+        ("Auth Info", {"fields": ("otp", "refresh_token","last_password_reset")}),
         ("Permissions", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
         ("Important Dates", {"fields": ("last_login", "date_joined")}),
     )
@@ -38,7 +39,7 @@ admin.site.register(User, CustomUserAdmin)
 class ProfileAdmin(admin.ModelAdmin):
     """ Separate Profile admin with optimized list display """
     list_display = ("user",)
-    search_fields = ("user__email", "user__user_unique_id")
+    search_fields = ("user__email", "user__user_id")
     readonly_fields = ("date_created",)
 
 
