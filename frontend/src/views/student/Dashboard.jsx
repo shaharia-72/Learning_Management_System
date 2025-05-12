@@ -4,6 +4,7 @@ import BaseHeader from '../partials/BaseHeader';
 import BaseFooter from '../partials/BaseFooter';
 import useAxios from '../../utils/useAxios';
 import UseData from '../plugin/UserData';
+import ReactPaginate from 'react-paginate';
 
 function Dashboard() {
     const [courses, setCourses] = useState([]);
@@ -11,6 +12,8 @@ function Dashboard() {
     const [activeTab, setActiveTab] = useState('all');
     const [searchQuery, setSearchQuery] = useState('');
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [currentPage, setCurrentPage] = useState(0);
+    const coursesPerPage = 8;
 
     const axiosInstance = useAxios();
     const userData = UseData();
@@ -18,11 +21,18 @@ function Dashboard() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const statsResponse = await axiosInstance.get(`student/summary/${userData?.user_id}/`);
+                if (!userData?.user_id) return;
+
+                const statsResponse = await axiosInstance.get(`student/summary/${userData.user_id}/`);
                 setStats(statsResponse.data[0]);
 
-                const coursesResponse = await axiosInstance.get(`student/CoursesList/${userData?.user_id}/`);
+                console.log(statsResponse.data[0]);
+
+                const coursesResponse = await axiosInstance.get(`student/course-list/${userData.user_id}/`);
                 setCourses(coursesResponse.data);
+
+                console.log(coursesResponse.data);
+
             } catch (error) {
                 console.error("Error fetching dashboard data:", error);
             }
@@ -37,13 +47,26 @@ function Dashboard() {
         const matchesSearch = course.course.title.toLowerCase().includes(searchQuery.toLowerCase());
         if (activeTab === 'all') return matchesSearch;
         if (activeTab === 'in-progress') {
-            return matchesSearch && course.completed_lesson?.length < course.lectures?.length;
+            return matchesSearch &&
+                (course.completed_lesson?.length === 0 ||
+                    course.completed_lesson?.length < course.lectures?.length);
         }
         if (activeTab === 'completed') {
-            return matchesSearch && course.completed_lesson?.length === course.lectures?.length;
+            return matchesSearch &&
+                course.completed_lesson?.length > 0 &&
+                course.completed_lesson?.length === course.lectures?.length;
         }
         return matchesSearch;
     });
+
+    // Pagination logic
+    const pageCount = Math.ceil(filteredCourses.length / coursesPerPage);
+    const offset = currentPage * coursesPerPage;
+    const currentCourses = filteredCourses.slice(offset, offset + coursesPerPage);
+
+    const handlePageClick = ({ selected }) => {
+        setCurrentPage(selected);
+    };
 
     return (
         <>
@@ -90,35 +113,6 @@ function Dashboard() {
 
                 {/* Main Content Area */}
                 <div className="main-content">
-                    {/* Top Navigation */}
-                    <nav className="navbar navbar-light bg-white shadow-sm">
-                        <div className="container-fluid">
-                            <button
-                                className="navbar-toggler d-lg-none"
-                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-                            >
-                                <i className="fas fa-bars"></i>
-                            </button>
-                            <div className="d-flex align-items-center ms-auto">
-                                <div className="dropdown">
-                                    <button
-                                        className="btn btn-light rounded-circle"
-                                        id="userDropdown"
-                                        data-bs-toggle="dropdown"
-                                    >
-                                        <i className="fas fa-user"></i>
-                                    </button>
-                                    <ul className="dropdown-menu dropdown-menu-end">
-                                        <li><span className="dropdown-item-text">Hi, {userData?.username}</span></li>
-                                        <li><hr className="dropdown-divider" /></li>
-                                        <li><Link className="dropdown-item" to="/profile">Profile</Link></li>
-                                        <li><Link className="dropdown-item" to="/settings">Settings</Link></li>
-                                        <li><Link className="dropdown-item" to="/logout">Logout</Link></li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </div>
-                    </nav>
 
                     {/* Dashboard Content */}
                     <div className="container-fluid py-4">
@@ -140,7 +134,7 @@ function Dashboard() {
                                                 <i className="fas fa-tv text-primary fs-4"></i>
                                             </div>
                                             <div>
-                                                <h3 className="mb-0 fw-bold">{stats.total_course || 0}</h3>
+                                                <h3 className="mb-0 fw-bold">{stats.total_courses || 0}</h3>
                                                 <span className="text-muted small">Total Courses</span>
                                             </div>
                                         </div>
@@ -192,8 +186,8 @@ function Dashboard() {
                                         </h4>
                                         <p className="text-muted small mb-0">Continue your learning journey</p>
                                     </div>
-                                    <div className="d-flex">
-                                        <div className="input-group me-3" style={{ width: '250px' }}>
+                                    <div className="d-flex flex-column flex-md-row gap-2">
+                                        <div className="input-group" style={{ width: '250px' }}>
                                             <span className="input-group-text bg-transparent">
                                                 <i className="fas fa-search"></i>
                                             </span>
@@ -202,25 +196,37 @@ function Dashboard() {
                                                 className="form-control"
                                                 placeholder="Search courses..."
                                                 value={searchQuery}
-                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onChange={(e) => {
+                                                    setSearchQuery(e.target.value);
+                                                    setCurrentPage(0);
+                                                }}
                                             />
                                         </div>
                                         <div className="btn-group">
                                             <button
                                                 className={`btn btn-sm ${activeTab === 'all' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                                onClick={() => setActiveTab('all')}
+                                                onClick={() => {
+                                                    setActiveTab('all');
+                                                    setCurrentPage(0);
+                                                }}
                                             >
                                                 All
                                             </button>
                                             <button
                                                 className={`btn btn-sm ${activeTab === 'in-progress' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                                onClick={() => setActiveTab('in-progress')}
+                                                onClick={() => {
+                                                    setActiveTab('in-progress');
+                                                    setCurrentPage(0);
+                                                }}
                                             >
                                                 In Progress
                                             </button>
                                             <button
                                                 className={`btn btn-sm ${activeTab === 'completed' ? 'btn-primary' : 'btn-outline-secondary'}`}
-                                                onClick={() => setActiveTab('completed')}
+                                                onClick={() => {
+                                                    setActiveTab('completed');
+                                                    setCurrentPage(0);
+                                                }}
                                             >
                                                 Completed
                                             </button>
@@ -234,63 +240,123 @@ function Dashboard() {
                                         <i className="fas fa-book-open fa-3x text-muted mb-3"></i>
                                         <h5>No courses found</h5>
                                         <p className="text-muted">Try changing your filters or enroll in new courses</p>
+                                        <Link to="/courses" className="btn btn-primary">
+                                            Browse Courses
+                                        </Link>
                                     </div>
                                 ) : (
-                                    <div className="row g-4">
-                                        {filteredCourses.map((c) => {
-                                            const progress = c.lectures?.length > 0
-                                                ? Math.round((c.completed_lesson?.length / c.lectures?.length) * 100)
-                                                : 0;
+                                    <>
+                                        <div className="row g-4">
+                                            {currentCourses.map((c) => {
+                                                const progress = c.lectures?.length > 0
+                                                    ? Math.round((c.completed_lesson?.length / c.lectures?.length) * 100)
+                                                    : 0;
 
-                                            return (
-                                                <div className="col-lg-4 col-md-6" key={c.id}>
-                                                    <div className="card h-100 border-0 shadow-sm hover-lift">
-                                                        <div className="card-img-top overflow-hidden" style={{ height: '160px' }}>
-                                                            <img
-                                                                src={c.course.image}
-                                                                alt={c.course.title}
-                                                                className="img-fluid w-100 h-100 object-cover"
-                                                            />
-                                                            <div className="badge bg-dark position-absolute top-2 end-2">
-                                                                {c.course.level}
-                                                            </div>
-                                                        </div>
-                                                        <div className="card-body">
-                                                            <h5 className="card-title">{c.course.title}</h5>
-                                                            <div className="d-flex justify-content-between small text-muted mb-3">
-                                                                <span>
-                                                                    <i className="fas fa-clock me-1"></i>
-                                                                    {c.lectures?.length} lessons
-                                                                </span>
-                                                                <span>
-                                                                    <i className="fas fa-check-circle me-1"></i>
-                                                                    {c.completed_lesson?.length} completed
-                                                                </span>
-                                                            </div>
-                                                            <div className="mb-3">
-                                                                <div className="progress" style={{ height: '6px' }}>
-                                                                    <div
-                                                                        className="progress-bar bg-success"
-                                                                        style={{ width: `${progress}%` }}
-                                                                    ></div>
+                                                const isCompleted = progress === 100;
+                                                const isStarted = c.completed_lesson?.length > 0;
+                                                const totalLessons = c.lectures?.length || 0;
+                                                const completedLessons = c.completed_lesson?.length || 0;
+
+                                                return (
+                                                    <div className="col-lg-3 col-md-6" key={c.id}>
+                                                        <div className="card h-100 border-0 shadow-sm hover-lift">
+                                                            <div className="card-img-top overflow-hidden position-relative" style={{ height: '160px' }}>
+                                                                <img
+                                                                    src={c.course.image}
+                                                                    alt={c.course.title}
+                                                                    className="img-fluid w-100 h-100 object-cover"
+                                                                />
+                                                                <div
+                                                                    className="badge bg-dark text-white position-absolute"
+                                                                    style={{ top: '10px', right: '10px' }}
+                                                                >
+                                                                    {c.course.level}
                                                                 </div>
-                                                                <small className="text-muted">{progress}% complete</small>
                                                             </div>
-                                                        </div>
-                                                        <div className="card-footer bg-white border-0">
-                                                            <Link
-                                                                to={`/course/${c.course.id}`}
-                                                                className="btn btn-primary w-100"
-                                                            >
-                                                                {progress === 100 ? 'View Certificate' : 'Continue'}
-                                                                <i className="fas fa-arrow-right ms-2"></i>
-                                                            </Link>
+
+                                                            <div className="card-body">
+                                                                <h5 className="card-title text-truncate" title={c.course.title}>
+                                                                    {c.course.title}
+                                                                </h5>
+                                                                <div className="d-flex justify-content-between small text-muted mb-3">
+                                                                    <span>
+                                                                        <i className="fas fa-clock me-1"></i>
+                                                                        {totalLessons} lessons
+                                                                    </span>
+                                                                    <span>
+                                                                        <i className="fas fa-check-circle me-1"></i>
+                                                                        {completedLessons} completed
+                                                                    </span>
+                                                                </div>
+                                                                <div className="mb-3">
+                                                                    <div className="progress" style={{ height: '6px' }}>
+                                                                        <div
+                                                                            className={`progress-bar ${isCompleted ? 'bg-success' : 'bg-primary'}`}
+                                                                            style={{ width: `${progress}%` }}
+                                                                            role="progressbar"
+                                                                            aria-valuenow={progress}
+                                                                            aria-valuemin="0"
+                                                                            aria-valuemax="100"
+                                                                        ></div>
+                                                                    </div>
+                                                                    <div className="d-flex justify-content-between">
+                                                                        <small className="text-muted">{progress}% complete</small>
+                                                                        {isCompleted && (
+                                                                            <small className="text-success">
+                                                                                <i className="fas fa-check-circle me-1"></i>
+                                                                                Completed
+                                                                            </small>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <div className="card-footer bg-white border-0 pt-0">
+                                                                <Link
+                                                                    to={`/student/course-detail/${UseData().user_id}/${c.enrollment_id}/`}
+                                                                    className={`btn w-100 ${isCompleted ? 'btn-success' : 'btn-primary'}`}
+                                                                >
+                                                                    {isCompleted ? (
+                                                                        <span>View Certificate</span>
+                                                                    ) : isStarted ? (
+                                                                        <span>Continue Learning</span>
+                                                                    ) : (
+                                                                        <span>Start Learning</span>
+                                                                    )}
+                                                                    <i className="fas fa-arrow-right ms-2"></i>
+                                                                </Link>
+                                                            </div>
                                                         </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
+                                                );
+                                            })}
+                                        </div>
+
+                                        {/* Pagination */}
+                                        {pageCount > 1 && (
+                                            <div className="d-flex justify-content-center mt-4">
+                                                <ReactPaginate
+                                                    previousLabel={<i className="fas fa-chevron-left"></i>}
+                                                    nextLabel={<i className="fas fa-chevron-right"></i>}
+                                                    breakLabel="..."
+                                                    breakClassName="page-item"
+                                                    breakLinkClassName="page-link"
+                                                    pageCount={pageCount}
+                                                    marginPagesDisplayed={2}
+                                                    pageRangeDisplayed={5}
+                                                    onPageChange={handlePageClick}
+                                                    containerClassName="pagination"
+                                                    pageClassName="page-item"
+                                                    pageLinkClassName="page-link"
+                                                    previousClassName="page-item"
+                                                    previousLinkClassName="page-link"
+                                                    nextClassName="page-item"
+                                                    nextLinkClassName="page-link"
+                                                    activeClassName="active"
+                                                    forcePage={currentPage}
+                                                />
+                                            </div>
+                                        )}
+                                    </>
                                 )}
                             </div>
                         </div>
@@ -298,10 +364,9 @@ function Dashboard() {
                 </div>
             </div>
 
-            <BaseFooter />
 
-            {/* Custom CSS */}
-            <style jsx global>{`
+            {/* Fix the style component that's causing warnings */}
+            <style>{`
                 :root {
                     --sidebar-width: 250px;
                     --sidebar-collapsed-width: 70px;
@@ -385,6 +450,30 @@ function Dashboard() {
                 .hover-lift:hover {
                     transform: translateY(-5px);
                     box-shadow: 0 0.5rem 1.5rem rgba(0, 0, 0, 0.1) !important;
+                }
+
+                .pagination {
+                    gap: 0.5rem;
+                }
+
+                .page-item .page-link {
+                    border-radius: 50% !important;
+                    width: 40px;
+                    height: 40px;
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    border: none;
+                    color: #6c757d;
+                }
+
+                .page-item.active .page-link {
+                    background-color: #0d6efd;
+                    color: white;
+                }
+
+                .page-item.disabled .page-link {
+                    color: #dee2e6;
                 }
 
                 @media (max-width: 992px) {
