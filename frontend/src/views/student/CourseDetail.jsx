@@ -1,702 +1,718 @@
-import React, { useState } from 'react'
-import BaseHeader from '../partials/BaseHeader'
-import BaseFooter from '../partials/BaseFooter'
-import Sidebar from './Partials/Sidebar'
-import Header from './Partials/Header'
-
-import ReactPlayer from 'react-player'
-
+import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import ReactPlayer from 'react-player';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
+import useAxios from '../../utils/useAxios';
+import UseData from '../plugin/UserData';
+import BaseSidebar from '../partials/BaseSidebar';
+import { Rating } from 'react-simple-star-rating';
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function CourseDetail() {
-
-  const [show, setShow] = useState(false);
-  const handleClose = () => setShow(false);
-  const handleShow = () => { setShow(true); }
-
+  const [showLectureModal, setShowLectureModal] = useState(false);
+  const [currentLecture, setCurrentLecture] = useState(null);
   const [noteShow, setNoteShow] = useState(false);
-  const handleNoteClose = () => setNoteShow(false);
-  const handleNoteShow = () => { setNoteShow(true); }
+  const [conversationShow, setConversationShow] = useState(false);
+  const [activeTab, setActiveTab] = useState('lectures');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [rating, setRating] = useState(0);
+  const [review, setReview] = useState('');
+  const [notes, setNotes] = useState([]);
+  const [newNote, setNewNote] = useState({ title: '', content: '' });
+  const [discussions, setDiscussions] = useState([]);
+  const [newDiscussion, setNewDiscussion] = useState({ title: '', message: '' });
+  const [currentDiscussion, setCurrentDiscussion] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
 
-  const [ConversationShow, setConversationShow] = useState(false);
-  const handleConversationClose = () => setConversationShow(false);
-  const handleConversationShow = () => { setConversationShow(true); }
+  const axiosInstance = useAxios();
+  const userData = UseData();
+
+  // Sample data - replace with your API calls
+  const courseLectures = [
+    {
+      id: 1,
+      title: "Introduction of Digital Marketing",
+      lectures: [
+        { id: 1, title: "Introduction", duration: "3m 9s", completed: true, premium: false },
+        { id: 2, title: "What is Digital Marketing", duration: "15m 10s", completed: true, premium: false },
+        { id: 3, title: "Type of Digital Marketing", duration: "18m 10s", completed: false, premium: true }
+      ]
+    },
+    {
+      id: 2,
+      title: "Customer Life cycle",
+      lectures: [
+        { id: 4, title: "What is Digital Marketing", duration: "11m 20s", completed: true, premium: false },
+        { id: 5, title: "15 Tips for Writing Magnetic Headlines", duration: "25m 20s", completed: false, premium: false },
+        { id: 6, title: "How to Write Like Your Customers Talk", duration: "11m 30s", completed: false, premium: false },
+        { id: 7, title: "How to Flip Features Into Benefits", duration: "35m 30s", completed: false, premium: true }
+      ]
+    }
+  ];
+
+  const handleLectureClick = (lecture) => {
+    setCurrentLecture(lecture);
+    setShowLectureModal(true);
+  };
+
+  const handleNoteSubmit = (e) => {
+    e.preventDefault();
+    setNotes([...notes, { ...newNote, id: notes.length + 1, date: new Date().toLocaleDateString() }]);
+    setNewNote({ title: '', content: '' });
+    setNoteShow(false);
+    toast.success('Note saved successfully!');
+  };
+
+  const handleDiscussionSubmit = (e) => {
+    e.preventDefault();
+    setDiscussions([...discussions, {
+      ...newDiscussion,
+      id: discussions.length + 1,
+      author: userData.name,
+      avatar: userData.avatar || 'https://randomuser.me/api/portraits/men/1.jpg',
+      date: new Date().toLocaleString(),
+      replies: []
+    }]);
+    setNewDiscussion({ title: '', message: '' });
+    toast.success('Discussion started!');
+  };
+
+  const handleMessageSubmit = (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+
+    setMessages([...messages, {
+      id: messages.length + 1,
+      author: userData.name,
+      avatar: userData.avatar || 'https://randomuser.me/api/portraits/men/1.jpg',
+      content: newMessage,
+      date: new Date().toLocaleTimeString()
+    }]);
+    setNewMessage('');
+  };
+
+  const handleReviewSubmit = (e) => {
+    e.preventDefault();
+    if (rating === 0) {
+      toast.error('Please select a rating');
+      return;
+    }
+    toast.success('Review submitted successfully!');
+    setRating(0);
+    setReview('');
+  };
+
+  // Calculate course progress
+  const totalLectures = courseLectures.reduce((acc, section) => acc + section.lectures.length, 0);
+  const completedLectures = courseLectures.reduce((acc, section) =>
+    acc + section.lectures.filter(lecture => lecture.completed).length, 0);
+  const progressPercentage = Math.round((completedLectures / totalLectures) * 100);
 
   return (
     <>
-      <BaseHeader />
+      <ToastContainer position="top-right" autoClose={3000} />
 
-      <section className="pt-5 pb-5">
-        <div className="container">
-          {/* Header Here */}
-          <Header />
-          <div className="row mt-0 mt-md-4">
-            {/* Sidebar Here */}
-            <Sidebar />
-            <div className="col-lg-9 col-md-8 col-12">
-              {/* <section className="bg-blue py-7">
-                <div className="container">
-                  <ReactPlayer url='https://www.youtube.com/watch?v=LXb3EKWsInQ' width={"100%"} height={600} />
+      <div className="course-detail-container">
+        <BaseSidebar
+          sidebarCollapsed={sidebarCollapsed}
+          setSidebarCollapsed={setSidebarCollapsed}
+          user={userData}
+        />
+
+        <main className={`main-content ${sidebarCollapsed ? 'collapsed' : ''}`}>
+          <div className="container-fluid py-4">
+            {/* Course Progress */}
+            <div className="card shadow-sm mb-4">
+              <div className="card-body">
+                <div className="d-flex justify-content-between align-items-center mb-3">
+                  <h5 className="mb-0">Course Progress</h5>
+                  <span className="badge bg-primary">{progressPercentage}% Complete</span>
                 </div>
-              </section> */}
-              <section className="mt-4">
-                <div className="container">
-                  <div className="row">
-                    {/* Main content START */}
-                    <div className="col-12">
-                      <div className="card shadow rounded-2 p-0 mt-n5">
-                        {/* Tabs START */}
-                        <div className="card-header border-bottom px-4 pt-3 pb-0">
-                          <ul
-                            className="nav nav-bottom-line py-0"
-                            id="course-pills-tab"
-                            role="tablist"
-                          >
-                            {/* Tab item */}
-                            <li className="nav-item me-2 me-sm-4" role="presentation">
-                              <button className="nav-link mb-2 mb-md-0 active" id="course-pills-tab-1" data-bs-toggle="pill" data-bs-target="#course-pills-1" type="button" role="tab" aria-controls="course-pills-1" aria-selected="true">
-                                Course Lectures
-                              </button>
-                            </li>
-                            {/* Tab item */}
-                            <li className="nav-item me-2 me-sm-4" role="presentation">
-                              <button
-                                className="nav-link mb-2 mb-md-0"
-                                id="course-pills-tab-2"
-                                data-bs-toggle="pill"
-                                data-bs-target="#course-pills-2"
-                                type="button"
-                                role="tab"
-                                aria-controls="course-pills-2"
-                                aria-selected="false"
-                              >
-                                Notes
-                              </button>
-                            </li>
-                            {/* Tab item */}
-                            <li className="nav-item me-2 me-sm-4" role="presentation">
-                              <button
-                                className="nav-link mb-2 mb-md-0"
-                                id="course-pills-tab-3"
-                                data-bs-toggle="pill"
-                                data-bs-target="#course-pills-3"
-                                type="button"
-                                role="tab"
-                                aria-controls="course-pills-3"
-                                aria-selected="false"
-                              >
-                                Discussion
-                              </button>
-                            </li>
+                <div className="progress" style={{ height: '10px' }}>
+                  <div
+                    className="progress-bar bg-success progress-bar-striped progress-bar-animated"
+                    role="progressbar"
+                    style={{ width: `${progressPercentage}%` }}
+                    aria-valuenow={progressPercentage}
+                    aria-valuemin={0}
+                    aria-valuemax={100}
+                  ></div>
+                </div>
+              </div>
+            </div>
 
-                            <li className="nav-item me-2 me-sm-4" role="presentation">
-                              <button
-                                className="nav-link mb-2 mb-md-0"
-                                id="course-pills-tab-4"
-                                data-bs-toggle="pill"
-                                data-bs-target="#course-pills-4"
-                                type="button"
-                                role="tab"
-                                aria-controls="course-pills-4"
-                                aria-selected="false"
-                              >
-                                Leave a Review
-                              </button>
-                            </li>
-                          </ul>
+            {/* Course Content Tabs */}
+            <div className="card shadow-sm">
+              <div className="card-header border-bottom bg-white">
+                <ul className="nav nav-tabs card-header-tabs" id="courseTabs" role="tablist">
+                  <li className="nav-item" role="presentation">
+                    <button
+                      className={`nav-link ${activeTab === 'lectures' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('lectures')}
+                    >
+                      <i className="fas fa-play-circle me-2"></i> Lectures
+                    </button>
+                  </li>
+                  <li className="nav-item" role="presentation">
+                    <button
+                      className={`nav-link ${activeTab === 'notes' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('notes')}
+                    >
+                      <i className="fas fa-sticky-note me-2"></i> Notes
+                    </button>
+                  </li>
+                  <li className="nav-item" role="presentation">
+                    <button
+                      className={`nav-link ${activeTab === 'discussions' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('discussions')}
+                    >
+                      <i className="fas fa-comments me-2"></i> Discussions
+                    </button>
+                  </li>
+                  <li className="nav-item" role="presentation">
+                    <button
+                      className={`nav-link ${activeTab === 'review' ? 'active' : ''}`}
+                      onClick={() => setActiveTab('review')}
+                    >
+                      <i className="fas fa-star me-2"></i> Leave Review
+                    </button>
+                  </li>
+                </ul>
+              </div>
+
+              <div className="card-body p-0">
+                {/* Lectures Tab */}
+                {activeTab === 'lectures' && (
+                  <div className="p-4">
+                    {courseLectures.map((section) => (
+                      <div key={section.id} className="mb-4">
+                        <div className="d-flex justify-content-between align-items-center mb-3">
+                          <h5 className="mb-0">{section.title}</h5>
+                          <span className="badge bg-light text-dark">
+                            {section.lectures.length} Lectures
+                          </span>
                         </div>
-                        {/* Tabs END */}
-                        {/* Tab contents START */}
-                        <div className="card-body p-sm-4">
-                          <div className="tab-content" id="course-pills-tabContent">
-                            {/* Content START */}
-                            <div
-                              className="tab-pane fade show active"
-                              id="course-pills-1"
-                              role="tabpanel"
-                              aria-labelledby="course-pills-tab-1"
-                            >
-                              {/* Accordion START */}
-                              <div
-                                className="accordion accordion-icon accordion-border"
-                                id="accordionExample2"
-                              >
 
-                                <div className="progress mb-3">
-                                  <div
-                                    className="progress-bar"
-                                    role="progressbar"
-                                    style={{ width: `${25}%` }}
-                                    aria-valuenow={25}
-                                    aria-valuemin={0}
-                                    aria-valuemax={100}
-                                  >
-                                    25%
-                                  </div>
+                        <div className="list-group">
+                          {section.lectures.map((lecture) => (
+                            <div
+                              key={lecture.id}
+                              className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${lecture.completed ? 'bg-light-success' : ''}`}
+                              onClick={() => handleLectureClick(lecture)}
+                              style={{ cursor: 'pointer' }}
+                            >
+                              <div className="d-flex align-items-center">
+                                <div className="me-3">
+                                  {lecture.completed ? (
+                                    <i className="fas fa-check-circle text-success"></i>
+                                  ) : lecture.premium ? (
+                                    <i className="fas fa-lock text-warning"></i>
+                                  ) : (
+                                    <i className="fas fa-play-circle text-primary"></i>
+                                  )}
                                 </div>
-                                {/* Item */}
-                                <div className="accordion-item mb-3">
-                                  <h6 className="accordion-header font-base" id="heading-1">
+                                <div>
+                                  <h6 className="mb-0">{lecture.title}</h6>
+                                  {lecture.premium && (
+                                    <span className="badge bg-warning text-dark small mt-1">
+                                      Premium Content
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                              <span className="badge bg-light text-dark">{lecture.duration}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Notes Tab */}
+                {activeTab === 'notes' && (
+                  <div className="p-4">
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                      <h5>My Notes</h5>
+                      <button
+                        className="btn btn-primary"
+                        onClick={() => setNoteShow(true)}
+                      >
+                        <i className="fas fa-plus me-2"></i> Add Note
+                      </button>
+                    </div>
+
+                    {notes.length === 0 ? (
+                      <div className="text-center py-5">
+                        <i className="fas fa-sticky-note fa-3x text-muted mb-3"></i>
+                        <h5>No Notes Yet</h5>
+                        <p className="text-muted">Add your first note to get started</p>
+                        <button
+                          className="btn btn-primary"
+                          onClick={() => setNoteShow(true)}
+                        >
+                          Create Note
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="row g-4">
+                        {notes.map((note) => (
+                          <div key={note.id} className="col-md-6">
+                            <div className="card h-100 shadow-sm">
+                              <div className="card-body">
+                                <h5 className="card-title">{note.title}</h5>
+                                <p className="card-text text-muted">{note.content.substring(0, 150)}...</p>
+                                <div className="d-flex justify-content-between align-items-center">
+                                  <small className="text-muted">{note.date}</small>
+                                  <div>
                                     <button
-                                      className="accordion-button fw-bold rounded d-sm-flex d-inline-block collapsed"
-                                      type="button"
-                                      data-bs-toggle="collapse"
-                                      data-bs-target="#collapse-1"
-                                      aria-expanded="true"
-                                      aria-controls="collapse-1"
+                                      className="btn btn-sm btn-outline-primary me-2"
+                                      onClick={() => {
+                                        setNewNote({ title: note.title, content: note.content });
+                                        setNoteShow(true);
+                                      }}
                                     >
-                                      Introduction of Digital Marketing
-                                      <span className="small ms-0 ms-sm-2">
-                                        (3 Lectures)
-                                      </span>
+                                      <i className="fas fa-edit"></i>
                                     </button>
-                                  </h6>
-                                  <div
-                                    id="collapse-1"
-                                    className="accordion-collapse collapse show"
-                                    aria-labelledby="heading-1"
-                                    data-bs-parent="#accordionExample2"
-                                  >
-                                    <div className="accordion-body mt-3">
-                                      {/* Course lecture */}
-                                      <div className="d-flex justify-content-between align-items-center">
-                                        <div className="position-relative d-flex align-items-center">
-                                          <a
-                                            href="#"
-                                            className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                          >
-                                            <i className="fas fa-play me-0" />
-                                          </a>
-                                          <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
-                                            Introduction
-                                          </span>
-                                        </div>
-                                        <div className='d-flex'>
-                                          <p className="mb-0">3m 9s</p>
-                                          <input type="checkbox" className='form-check-input' name="" id="" />
-                                        </div>
-                                      </div>
-                                      <hr /> {/* Divider */}
-                                      {/* Course lecture */}
-                                      <div className="d-flex justify-content-between align-items-center">
-                                        <div className="position-relative d-flex align-items-center">
-                                          <a
-                                            href="#"
-                                            className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                          >
-                                            <i className="fas fa-play me-0" />
-                                          </a>
-                                          <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
-
-                                            What is Digital Marketing What is Digital
-                                            Marketing
-                                          </span>
-                                        </div>
-                                        <p className="mb-0 text-truncate">15m 10s</p>
-                                      </div>
-                                      <hr /> {/* Divider */}
-                                      {/* Course lecture */}
-                                      <div className="d-flex justify-content-between align-items-center">
-                                        <div className="position-relative d-flex align-items-center">
-                                          <a
-                                            href="#"
-                                            className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                          >
-                                            <i className="fas fa-lock me-0" />
-                                          </a>
-                                          <span className="d-inline-block text-truncate text-muted ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
-                                            Type of Digital Marketing
-                                          </span>
-                                        </div>
-                                        <p className="mb-0">18m 10s</p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                {/* Item */}
-                                <div className="accordion-item mb-3">
-                                  <h6 className="accordion-header font-base" id="heading-2">
-                                    <button
-                                      className="accordion-button fw-bold collapsed rounded d-sm-flex d-inline-block"
-                                      type="button"
-                                      data-bs-toggle="collapse"
-                                      data-bs-target="#collapse-2"
-                                      aria-expanded="false"
-                                      aria-controls="collapse-2"
-                                    >
-                                      Customer Life cycle
-                                      <span className="small ms-0 ms-sm-2">
-                                        (4 Lectures)
-                                      </span>
+                                    <button className="btn btn-sm btn-outline-danger">
+                                      <i className="fas fa-trash"></i>
                                     </button>
-                                  </h6>
-                                  <div
-                                    id="collapse-2"
-                                    className="accordion-collapse collapse"
-                                    aria-labelledby="heading-2"
-                                    data-bs-parent="#accordionExample2"
-                                  >
-                                    {/* Accordion body START */}
-                                    <div className="accordion-body mt-3">
-                                      {/* Course lecture */}
-                                      <div className="d-flex justify-content-between align-items-center">
-                                        <div className="position-relative d-flex align-items-center">
-                                          <a
-                                            href="#"
-                                            className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                          >
-                                            <i className="fas fa-play me-0" />
-                                          </a>
-                                          <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
-                                            What is Digital Marketing
-                                          </span>
-                                        </div>
-                                        <p className="mb-0">11m 20s</p>
-                                      </div>
-                                      <hr /> {/* Divider */}
-                                      {/* Course lecture */}
-                                      <div className="d-flex justify-content-between align-items-center">
-                                        <div className="position-relative d-flex align-items-center">
-                                          <a
-                                            href="#"
-                                            className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                          >
-                                            <i className="fas fa-play me-0" />
-                                          </a>
-                                          <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
-                                            15 Tips for Writing Magnetic Headlines
-                                          </span>
-                                        </div>
-                                        <p className="mb-0 text-truncate">25m 20s</p>
-                                      </div>
-                                      <hr /> {/* Divider */}
-                                      {/* Course lecture */}
-                                      <div className="d-flex justify-content-between align-items-center">
-                                        <div className="position-relative d-flex align-items-center">
-                                          <a
-                                            href="#"
-                                            className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                          >
-                                            <i className="fas fa-play me-0" />
-                                          </a>
-                                          <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
-                                            How to Write Like Your Customers Talk
-                                          </span>
-                                        </div>
-                                        <p className="mb-0">11m 30s</p>
-                                      </div>
-                                      <hr /> {/* Divider */}
-                                      {/* Course lecture */}
-                                      <div className="d-flex justify-content-between align-items-center">
-                                        <div className="position-relative d-flex align-items-center">
-                                          <div>
-                                            <a
-                                              href="#"
-                                              className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
-                                              data-bs-toggle="modal"
-                                              data-bs-target="#exampleModal"
-                                            >
-                                              <i className="fas fa-play me-0" />
-                                            </a>
-                                          </div>
-                                          <div className="row g-sm-0 align-items-center">
-                                            <div className="col-sm-6">
-                                              <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-md-400px">
-                                                How to Flip Features Into Benefits
-                                              </span>
-                                            </div>
-                                            <div className="col-sm-6">
-                                              <span className="badge text-bg-orange ms-2 ms-md-0">
-                                                <i className="fas fa-lock fa-fw me-1" />
-                                                Premium
-                                              </span>
-                                            </div>
-                                          </div>
-                                        </div>
-                                        <p className="mb-0 d-inline-block text-truncate w-70px w-sm-60px">
-                                          35m 30s
-                                        </p>
-                                      </div>
-                                    </div>
-                                    {/* Accordion body END */}
-                                  </div>
-                                </div>
-
-
-                              </div>
-                              {/* Accordion END */}
-                            </div>
-
-                            <div
-                              className="tab-pane fade"
-                              id="course-pills-2"
-                              role="tabpanel"
-                              aria-labelledby="course-pills-tab-2"
-                            >
-                              <div className="card">
-                                <div className="card-header border-bottom p-0 pb-3">
-                                  <div className="d-sm-flex justify-content-between align-items-center">
-                                    <h4 className="mb-0 p-3">All Notes</h4>
-                                    {/* Add Note Modal */}
-                                    <button type="button" className="btn btn-primary me-3" data-bs-toggle="modal" data-bs-target="#exampleModal" >
-                                      Add Note <i className='fas fa-pen'></i>
-                                    </button>
-                                    <div className="modal fade" id="exampleModal" tabIndex={-1} aria-labelledby="exampleModalLabel" aria-hidden="true">
-                                      <div className="modal-dialog modal-dialog-centered">
-                                        <div className="modal-content">
-                                          <div className="modal-header">
-                                            <h5 className="modal-title" id="exampleModalLabel">
-                                              Add New Note <i className='fas fa-pen'></i>
-                                            </h5>
-                                            <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close" />
-                                          </div>
-                                          <div className="modal-body">
-                                            <form>
-                                              <div className="mb-3">
-                                                <label htmlFor="exampleInputEmail1" className="form-label">
-                                                  Note Title
-                                                </label>
-                                                <input type="text" className="form-control" />
-                                              </div>
-                                              <div className="mb-3">
-                                                <label htmlFor="exampleInputPassword1" className="form-label">
-                                                  Note Content
-                                                </label>
-                                                <textarea className='form-control' name="" id="" cols="30" rows="10"></textarea>
-                                              </div>
-                                              <button type="button" className="btn btn-secondary me-2" data-bs-dismiss="modal" ><i className='fas fa-arrow-left'></i> Close</button>
-                                              <button type="submit" className="btn btn-primary">Save Note <i className='fas fa-check-circle'></i></button>
-                                            </form>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </div>
-                                <div className="card-body p-0 pt-3">
-                                  {/* Note item start */}
-                                  <div className="row g-4 p-3">
-                                    <div className="col-sm-11 col-xl-11 shadow p-3 m-3 rounded">
-                                      <h5> What is Digital Marketing What is Digital Marketing</h5>
-                                      <p>
-                                        Arranging rapturous did believe him all had supported.
-                                        Supposing so be resolving breakfast am or perfectly.
-                                        It drew a hill from me. Valley by oh twenty direct me
-                                        so. Departure defective arranging rapturous did
-                                        believe him all had supported. Family months lasted
-                                        simple set nature vulgar him. Picture for attempt joy
-                                        excited ten carried manners talking how. Family months
-                                        lasted simple set nature vulgar him. Picture for
-                                        attempt joy excited ten carried manners talking how.
-                                      </p>
-                                      {/* Buttons */}
-                                      <div className="hstack gap-3 flex-wrap">
-                                        <a onClick={handleNoteShow} className="btn btn-success mb-0">
-                                          <i className="bi bi-pencil-square me-2" /> Edit
-                                        </a>
-                                        <a href="#" className="btn btn-danger mb-0">
-                                          <i className="bi bi-trash me-2" /> Delete
-                                        </a>
-                                      </div>
-                                    </div>
-                                  </div>
-                                  <hr />
-                                </div>
-                              </div>
-                            </div>
-                            <div
-                              className="tab-pane fade"
-                              id="course-pills-3"
-                              role="tabpanel"
-                              aria-labelledby="course-pills-tab-3"
-                            >
-                              <div className="card">
-                                {/* Card header */}
-                                <div className="card-header border-bottom p-0 pb-3">
-                                  {/* Title */}
-                                  <h4 className="mb-3 p-3">Discussion</h4>
-                                  <form className="row g-4 p-3">
-                                    {/* Search */}
-                                    <div className="col-sm-6 col-lg-9">
-                                      <div className="position-relative">
-                                        <input className="form-control pe-5 bg-transparent" type="search" placeholder="Search" aria-label="Search" />
-                                        <button className="bg-transparent p-2 position-absolute top-50 end-0 translate-middle-y border-0 text-primary-hover text-reset" type="submit">
-                                          <i className="fas fa-search fs-6 " />
-                                        </button>
-                                      </div>
-                                    </div>
-                                    <div className="col-sm-6 col-lg-3">
-                                      <a
-                                        href="#"
-                                        className="btn btn-primary mb-0 w-100"
-                                        data-bs-toggle="modal"
-                                        data-bs-target="#modalCreatePost"
-                                      >
-                                        Ask Question
-                                      </a>
-                                    </div>
-                                  </form>
-                                </div>
-                                {/* Card body */}
-                                <div className="card-body p-0 pt-3">
-                                  <div className="vstack gap-3 p-3">
-                                    {/* Question item START */}
-                                    <div className="shadow rounded-3 p-3">
-                                      <div className="d-sm-flex justify-content-sm-between mb-3">
-                                        <div className="d-flex align-items-center">
-                                          <div className="avatar avatar-sm flex-shrink-0">
-                                            <img
-                                              src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg"
-                                              className="avatar-img rounded-circle"
-                                              alt="avatar"
-                                              style={{ width: "60px", height: "60px", borderRadius: "50%", objectFit: "cover" }}
-                                            />
-                                          </div>
-                                          <div className="ms-2">
-                                            <h6 className="mb-0">
-                                              <a href="#" className='text-decoration-none text-dark'>Angelina Poi</a>
-                                            </h6>
-                                            <small>Asked 10 Hours ago</small>
-                                          </div>
-                                        </div>
-                                      </div>
-                                      <h5>How can i fix this bug?</h5>
-                                      <button className='btn btn-primary btn-sm mb-3 mt-3' onClick={handleConversationShow}>Join Conversation <i className='fas fa-arrow-right'></i></button>
-                                    </div>
-
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div
-                              className="tab-pane fade"
-                              id="course-pills-4"
-                              role="tabpanel"
-                              aria-labelledby="course-pills-tab-4"
-                            >
-                              <div className="card">
-                                {/* Card header */}
-                                <div className="card-header border-bottom p-0 pb-3">
-                                  {/* Title */}
-                                  <h4 className="mb-3 p-3">Leave a Review</h4>
-                                  <div className="mt-2">
-                                    <form className="row g-3 p-3">
-
-                                      {/* Rating */}
-                                      <div className="col-12 bg-light-input">
-                                        <select
-                                          id="inputState2"
-                                          className="form-select js-choice"
-                                        >
-                                          <option value={1}>★☆☆☆☆ (1/5)</option>
-                                          <option value={2}>★★☆☆☆ (2/5)</option>
-                                          <option value={3}>★★★☆☆ (3/5)</option>
-                                          <option value={4}>★★★★☆ (4/5)</option>
-                                          <option value={5}>★★★★★ (5/5)</option>
-                                        </select>
-                                      </div>
-                                      {/* Message */}
-                                      <div className="col-12 bg-light-input">
-                                        <textarea
-                                          className="form-control"
-                                          id="exampleFormControlTextarea1"
-                                          placeholder="Your review"
-                                          rows={3}
-                                          defaultValue={""}
-                                        />
-                                      </div>
-                                      {/* Button */}
-                                      <div className="col-12">
-                                        <button type="submit" className="btn btn-primary mb-0">
-                                          Post Review
-                                        </button>
-                                      </div>
-                                    </form>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Discussions Tab */}
+                {activeTab === 'discussions' && (
+                  <div className="p-4">
+                    <div className="d-flex justify-content-between align-items-center mb-4">
+                      <h5>Course Discussions</h5>
+                      <button
+                        className="btn btn-primary"
+                        data-bs-toggle="modal"
+                        data-bs-target="#newDiscussionModal"
+                      >
+                        <i className="fas fa-plus me-2"></i> New Discussion
+                      </button>
+                    </div>
+
+                    {discussions.length === 0 ? (
+                      <div className="text-center py-5">
+                        <i className="fas fa-comments fa-3x text-muted mb-3"></i>
+                        <h5>No Discussions Yet</h5>
+                        <p className="text-muted">Be the first to start a discussion</p>
+                        <button
+                          className="btn btn-primary"
+                          data-bs-toggle="modal"
+                          data-bs-target="#newDiscussionModal"
+                        >
+                          Start Discussion
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="list-group">
+                        {discussions.map((discussion) => (
+                          <div
+                            key={discussion.id}
+                            className="list-group-item list-group-item-action"
+                            onClick={() => {
+                              setCurrentDiscussion(discussion);
+                              setConversationShow(true);
+                            }}
+                            style={{ cursor: 'pointer' }}
+                          >
+                            <div className="d-flex">
+                              <img
+                                src={discussion.avatar}
+                                alt={discussion.author}
+                                className="rounded-circle me-3"
+                                width="48"
+                                height="48"
+                              />
+                              <div>
+                                <div className="d-flex justify-content-between align-items-center">
+                                  <h6 className="mb-0">{discussion.title}</h6>
+                                  <small className="text-muted">{discussion.date}</small>
+                                </div>
+                                <p className="mb-1 text-muted">{discussion.author}</p>
+                                <p className="mb-0">{discussion.message.substring(0, 100)}...</p>
+                                <div className="mt-2">
+                                  <span className="badge bg-light text-dark me-2">
+                                    <i className="fas fa-comment me-1"></i>
+                                    {discussion.replies.length} Replies
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Review Tab */}
+                {activeTab === 'review' && (
+                  <div className="p-4">
+                    <div className="text-center mb-4">
+                      <h4>Rate This Course</h4>
+                      <p className="text-muted">Share your experience to help others</p>
+                    </div>
+
+                    <form onSubmit={handleReviewSubmit}>
+                      <div className="mb-4 text-center">
+                        <Rating
+                          onClick={(rate) => setRating(rate)}
+                          ratingValue={rating}
+                          size={40}
+                          transition
+                          fillColor="#ffc107"
+                          emptyColor="#e4e5e9"
+                          className="rating-stars"
+                        />
+                      </div>
+
+                      <div className="mb-4">
+                        <label htmlFor="reviewText" className="form-label">Your Review</label>
+                        <textarea
+                          className="form-control"
+                          id="reviewText"
+                          rows="5"
+                          value={review}
+                          onChange={(e) => setReview(e.target.value)}
+                          placeholder="Share your thoughts about this course..."
+                        ></textarea>
+                      </div>
+
+                      <div className="text-center">
+                        <button type="submit" className="btn btn-primary px-4">
+                          <i className="fas fa-paper-plane me-2"></i> Submit Review
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Lecture Modal */}
+        <Modal show={showLectureModal} onHide={() => setShowLectureModal(false)} size="xl" centered>
+          <Modal.Header closeButton>
+            <Modal.Title>
+              {currentLecture && (
+                <>
+                  <i className="fas fa-play-circle me-2 text-primary"></i>
+                  {currentLecture.title}
+                </>
+              )}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="ratio ratio-16x9">
+              <ReactPlayer
+                url="https://www.youtube.com/watch?v=LXb3EKWsInQ"
+                width="100%"
+                height="100%"
+                controls
+                playing
+              />
+            </div>
+          </Modal.Body>
+          <Modal.Footer className="d-flex justify-content-between">
+            <Button variant="outline-secondary" onClick={() => setShowLectureModal(false)}>
+              <i className="fas fa-times me-2"></i> Close
+            </Button>
+            <div>
+              <Button variant="outline-primary me-2">
+                <i className="fas fa-sticky-note me-2"></i> Take Notes
+              </Button>
+              <Button variant="primary">
+                <i className="fas fa-check-circle me-2"></i> Mark Complete
+              </Button>
+            </div>
+          </Modal.Footer>
+        </Modal>
+
+        {/* Note Modal */}
+        <Modal show={noteShow} onHide={() => {
+          setNoteShow(false);
+          setNewNote({ title: '', content: '' });
+        }} centered>
+          <Modal.Header closeButton>
+            <Modal.Title>
+              <i className="fas fa-sticky-note me-2 text-primary"></i>
+              {newNote.id ? 'Edit Note' : 'Add New Note'}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <form onSubmit={handleNoteSubmit}>
+              <div className="mb-3">
+                <label className="form-label">Note Title</label>
+                <input
+                  type="text"
+                  className="form-control"
+                  value={newNote.title}
+                  onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                  required
+                />
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Content</label>
+                <textarea
+                  className="form-control"
+                  rows="8"
+                  value={newNote.content}
+                  onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                  required
+                ></textarea>
+              </div>
+              <div className="d-flex justify-content-end">
+                <Button
+                  variant="outline-secondary"
+                  className="me-2"
+                  onClick={() => {
+                    setNoteShow(false);
+                    setNewNote({ title: '', content: '' });
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button variant="primary" type="submit">
+                  Save Note
+                </Button>
+              </div>
+            </form>
+          </Modal.Body>
+        </Modal>
+
+        {/* Discussion Modal */}
+        <Modal show={conversationShow} onHide={() => setConversationShow(false)} size="lg" centered>
+          <Modal.Header closeButton>
+            <Modal.Title>
+              <i className="fas fa-comments me-2 text-primary"></i>
+              {currentDiscussion && currentDiscussion.title}
+            </Modal.Title>
+          </Modal.Header>
+          <Modal.Body>
+            <div className="discussion-container">
+              <div className="discussion-messages">
+                {messages.length === 0 ? (
+                  <div className="text-center py-4">
+                    <i className="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                    <h5>No Messages Yet</h5>
+                    <p className="text-muted">Be the first to reply to this discussion</p>
+                  </div>
+                ) : (
+                  messages.map((message) => (
+                    <div key={message.id} className="message mb-3">
+                      <div className="d-flex">
+                        <img
+                          src={message.avatar}
+                          alt={message.author}
+                          className="rounded-circle me-3"
+                          width="40"
+                          height="40"
+                        />
+                        <div>
+                          <div className="d-flex align-items-center mb-1">
+                            <strong className="me-2">{message.author}</strong>
+                            <small className="text-muted">{message.date}</small>
+                          </div>
+                          <div className="message-bubble p-3 rounded">
+                            {message.content}
+                          </div>
                         </div>
                       </div>
                     </div>
-                  </div>
+                  ))
+                )}
+              </div>
+
+              <form onSubmit={handleMessageSubmit} className="mt-4">
+                <div className="input-group">
+                  <input
+                    type="text"
+                    className="form-control"
+                    placeholder="Type your message..."
+                    value={newMessage}
+                    onChange={(e) => setNewMessage(e.target.value)}
+                  />
+                  <button className="btn btn-primary" type="submit">
+                    <i className="fas fa-paper-plane"></i>
+                  </button>
                 </div>
-              </section>
+              </form>
+            </div>
+          </Modal.Body>
+        </Modal>
+
+        {/* New Discussion Modal */}
+        <div className="modal fade" id="newDiscussionModal" tabIndex="-1" aria-hidden="true">
+          <div className="modal-dialog modal-dialog-centered">
+            <div className="modal-content">
+              <div className="modal-header">
+                <h5 className="modal-title">
+                  <i className="fas fa-plus-circle me-2 text-primary"></i>
+                  New Discussion
+                </h5>
+                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+              </div>
+              <div className="modal-body">
+                <form onSubmit={handleDiscussionSubmit}>
+                  <div className="mb-3">
+                    <label className="form-label">Discussion Title</label>
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={newDiscussion.title}
+                      onChange={(e) => setNewDiscussion({ ...newDiscussion, title: e.target.value })}
+                      required
+                    />
+                  </div>
+                  <div className="mb-3">
+                    <label className="form-label">Your Question/Message</label>
+                    <textarea
+                      className="form-control"
+                      rows="5"
+                      value={newDiscussion.message}
+                      onChange={(e) => setNewDiscussion({ ...newDiscussion, message: e.target.value })}
+                      required
+                    ></textarea>
+                  </div>
+                  <div className="d-flex justify-content-end">
+                    <button
+                      type="button"
+                      className="btn btn-outline-secondary me-2"
+                      data-bs-dismiss="modal"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn btn-primary"
+                      data-bs-dismiss="modal"
+                    >
+                      Post Discussion
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
-
-
-      {/* Lecture Modal */}
-      <Modal show={null} size='lg' onHide={null}>
-        <Modal.Header closeButton>
-          <Modal.Title>Lesson: Lesson Title</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <ReactPlayer url={`url-here`} controls playing width={"100%"} height={"100%"} />
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={null}>Close</Button>
-        </Modal.Footer>
-      </Modal>
-
-
-      {/* Note Edit Modal */}
-      <Modal show={noteShow} size='lg' onHide={handleNoteClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>Note: Note Title</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <form>
-            <div className="mb-3">
-              <label htmlFor="exampleInputEmail1" className="form-label">Note Title</label>
-              <input defaultValue={null} name='title' type="text" className="form-control" />
-            </div>
-            <div className="mb-3">
-              <label htmlFor="exampleInputPassword1" className="form-label">Note Content</label>
-              <textarea onChange={null} defaultValue={null} name='note' className='form-control' cols="30" rows="10"></textarea>
-            </div>
-            <button type="button" className="btn btn-secondary me-2" onClick={null}><i className='fas fa-arrow-left'></i> Close</button>
-            <button type="submit" className="btn btn-primary">Save Note <i className='fas fa-check-circle'></i></button>
-          </form>
-        </Modal.Body>
-      </Modal>
-
-      {/* Note Edit Modal */}
-      <Modal show={ConversationShow} size='lg' onHide={handleConversationClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>Lesson: 123</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <div className="border p-2 p-sm-4 rounded-3">
-            <ul className="list-unstyled mb-0" style={{ overflowY: "scroll", height: "500px" }}>
-              <li className="comment-item mb-3">
-                <div className="d-flex">
-                  <div className="avatar avatar-sm flex-shrink-0">
-                    <a href="#">
-                      <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                    </a>
-                  </div>
-                  <div className="ms-2">
-                    {/* Comment by */}
-                    <div className="bg-light p-3 rounded w-100">
-                      <div className="d-flex w-100 justify-content-center">
-                        <div className="me-2 ">
-                          <h6 className="mb-1 lead fw-bold">
-                            <a href="#!" className='text-decoration-none text-dark'> Louis Ferguson </a><br />
-                            <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                          </h6>
-                          <p className="mb-0 mt-3  ">Removed demands expense account
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              </li>
-
-              <li className="comment-item mb-3">
-                <div className="d-flex">
-                  <div className="avatar avatar-sm flex-shrink-0">
-                    <a href="#">
-                      <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                    </a>
-                  </div>
-                  <div className="ms-2">
-                    {/* Comment by */}
-                    <div className="bg-light p-3 rounded w-100">
-                      <div className="d-flex w-100 justify-content-center">
-                        <div className="me-2 ">
-                          <h6 className="mb-1 lead fw-bold">
-                            <a href="#!" className='text-decoration-none text-dark'> Louis Ferguson </a><br />
-                            <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                          </h6>
-                          <p className="mb-0 mt-3  ">Removed demands expense account from the debby building in a hall  town tak with
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              </li>
-
-              <li className="comment-item mb-3">
-                <div className="d-flex">
-                  <div className="avatar avatar-sm flex-shrink-0">
-                    <a href="#">
-                      <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                    </a>
-                  </div>
-                  <div className="ms-2">
-                    {/* Comment by */}
-                    <div className="bg-light p-3 rounded w-100">
-                      <div className="d-flex w-100 justify-content-center">
-                        <div className="me-2 ">
-                          <h6 className="mb-1 lead fw-bold">
-                            <a href="#!" className='text-decoration-none text-dark'> Louis Ferguson </a><br />
-                            <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                          </h6>
-                          <p className="mb-0 mt-3  ">Removed demands expense account
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              </li>
-
-              <li className="comment-item mb-3">
-                <div className="d-flex">
-                  <div className="avatar avatar-sm flex-shrink-0">
-                    <a href="#">
-                      <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                    </a>
-                  </div>
-                  <div className="ms-2">
-                    {/* Comment by */}
-                    <div className="bg-light p-3 rounded w-100">
-                      <div className="d-flex w-100 justify-content-center">
-                        <div className="me-2 ">
-                          <h6 className="mb-1 lead fw-bold">
-                            <a href="#!" className='text-decoration-none text-dark'> Louis Ferguson </a><br />
-                            <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                          </h6>
-                          <p className="mb-0 mt-3  ">Removed demands expense account
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-
-                  </div>
-                </div>
-              </li>
-            </ul>
-
-            <form class="w-100 d-flex">
-              <textarea name='message' class="one form-control pe-4 bg-light w-75" id="autoheighttextarea" rows="2" placeholder="What's your question?"></textarea>
-              <button class="btn btn-primary ms-2 mb-0 w-25" type="button">Post <i className='fas fa-paper-plane'></i></button>
-            </form>
-
-            <form class="w-100">
-              <input name='title' type="text" className="form-control mb-2" placeholder='Question Title' />
-              <textarea name='message' class="one form-control pe-4 mb-2 bg-light" id="autoheighttextarea" rows="5" placeholder="What's your question?"></textarea>
-              <button class="btn btn-primary mb-0 w-25" type="button">Post <i className='fas fa-paper-plane'></i></button>
-            </form>
-
-          </div>
-        </Modal.Body>
-      </Modal>
-
-      <BaseFooter />
+      <style jsx>{`
+        .course-detail-container {
+          display: flex;
+          min-height: 100vh;
+          background-color: #f8f9fa;
+        }
+        
+        .main-content {
+          flex: 1;
+          margin-left: 260px;
+          transition: margin-left 0.3s ease;
+        }
+        
+        .main-content.collapsed {
+          margin-left: 80px;
+        }
+        
+        .card {
+          border: none;
+          border-radius: 10px;
+          overflow: hidden;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+          transform: translateY(-5px);
+          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
+        }
+        
+        .list-group-item {
+          border-radius: 8px !important;
+          margin-bottom: 8px;
+          transition: all 0.2s ease;
+          border: 1px solid rgba(0, 0, 0, 0.05);
+        }
+        
+        .list-group-item:hover {
+          background-color: #f8f9fa;
+          transform: translateX(5px);
+        }
+        
+        .message-bubble {
+          background-color: #f1f3f5;
+          position: relative;
+          max-width: 80%;
+        }
+        
+        .message-bubble:after {
+          content: '';
+          position: absolute;
+          left: -10px;
+          top: 15px;
+          width: 0;
+          height: 0;
+          border: 10px solid transparent;
+          border-right-color: #f1f3f5;
+          border-left: 0;
+        }
+        
+        .discussion-messages {
+          max-height: 400px;
+          overflow-y: auto;
+          padding-right: 10px;
+        }
+        
+        /* Custom scrollbar */
+        .discussion-messages::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .discussion-messages::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 10px;
+        }
+        
+        .discussion-messages::-webkit-scrollbar-thumb {
+          background: #888;
+          border-radius: 10px;
+        }
+        
+        .discussion-messages::-webkit-scrollbar-thumb:hover {
+          background: #555;
+        }
+        
+        .rating-stars {
+          display: inline-block;
+        }
+        
+        @media (max-width: 992px) {
+          .main-content {
+            margin-left: 0;
+          }
+          
+          .main-content.collapsed {
+            margin-left: 0;
+          }
+        }
+      `}</style>
     </>
-  )
+  );
 }
 
-export default CourseDetail
+export default CourseDetail;

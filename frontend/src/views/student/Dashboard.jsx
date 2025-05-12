@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import BaseHeader from '../partials/BaseHeader';
 import BaseFooter from '../partials/BaseFooter';
+import BaseSidebar from '../partials/BaseSidebar';
 import useAxios from '../../utils/useAxios';
 import UseData from '../plugin/UserData';
 import ReactPaginate from 'react-paginate';
@@ -70,11 +71,11 @@ function Dashboard() {
 
     return (
         <>
-            <BaseHeader />
+            {/* <BaseHeader /> */}
 
             <div className="dashboard-wrapper">
                 {/* Sidebar with Bootstrap styling */}
-                <div className={`sidebar bg-dark text-white ${sidebarCollapsed ? 'collapsed' : ''}`}>
+                {/* <div className={`sidebar bg-dark text-white ${sidebarCollapsed ? 'collapsed' : ''}`}>
                     <div className="sidebar-header d-flex align-items-center justify-content-between p-3">
                         <h5 className="mb-0 text-white">
                             {!sidebarCollapsed && <span>EduPortal</span>}
@@ -109,20 +110,25 @@ function Dashboard() {
                             {!sidebarCollapsed && <span>Settings</span>}
                         </Link>
                     </nav>
-                </div>
+                </div> */}
+                <BaseSidebar
+                    sidebarCollapsed={sidebarCollapsed}
+                    setSidebarCollapsed={setSidebarCollapsed}
+                    user={userData}
+                />
 
                 {/* Main Content Area */}
                 <div className="main-content">
 
                     {/* Dashboard Content */}
                     <div className="container-fluid py-4">
-                        {/* Welcome Header */}
+                        {/* Welcome Header
                         <div className="row mb-4">
                             <div className="col-12">
                                 <h2 className="mb-1">Welcome back, {userData?.username}!</h2>
                                 <p className="text-muted">Here's what's happening with your courses today</p>
                             </div>
-                        </div>
+                        </div> */}
 
                         {/* Stats Cards */}
                         <div className="row mb-4 g-3">
@@ -312,7 +318,7 @@ function Dashboard() {
                                                             </div>
                                                             <div className="card-footer bg-white border-0 pt-0">
                                                                 <Link
-                                                                    to={`/student/course-detail/${UseData().user_id}/${c.enrollment_id}/`}
+                                                                    to={`/student/course-detail/${UseData().user_id}/${c.course.enrollment_id}/`}
                                                                     className={`btn w-100 ${isCompleted ? 'btn-success' : 'btn-primary'}`}
                                                                 >
                                                                     {isCompleted ? (

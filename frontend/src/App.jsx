@@ -37,7 +37,7 @@ function App() {
             {/* Student Routes */}
             <Route path="/student/dashboard/" element={<StudentDashboard />} />
             <Route path="/student/courses/" element={<StudentCourses />} />
-            <Route path="/student/courses/:enrollment_id/" element={<StudentCourseDetail />} />
+            <Route path="/student/course-detail/:user_id/:enrollment_id/" element={<StudentCourseDetail />} />
           </Route>
         </Routes>
       </MainWrapper>
