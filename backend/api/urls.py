@@ -34,7 +34,7 @@ urlpatterns = [
     path("student/course-detail/<user_id>/<str:enrollment_id>/", api_views.StudentCourseDetailView.as_view()),
     path("student/course-completed/", api_views.StudentCourseCompletedCreateView.as_view()),
     path("student/course-note/<user_id>/<enrollment_id>/", api_views.StudentNoteCreateView.as_view()),
-    path("student/course-note-detail/<user_id>/<enrollment_id>/<note_id>/", api_views.StudentNoteDetailView.as_view()),
+    path("student/course-note-detail/<user_id>/<enrollment_id>/<str:note_id>/", api_views.StudentNoteDetailView.as_view()),
     path("student/rate-course/", api_views.StudentRateCourseCreateView.as_view()),
     path("student/review-detail/<user_id>/<review_id>/", api_views.StudentRateCourseUpdateView.as_view()),
     path("student/wishlist/<user_id>/", api_views.StudentWishListListCreateView.as_view()),

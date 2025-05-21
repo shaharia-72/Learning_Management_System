@@ -1,4 +1,4 @@
-from datetime import timezone
+from django.utils import timezone
 from decimal import Decimal
 import logging
 import secrets
@@ -19,6 +19,7 @@ from rest_framework import generics, status, viewsets
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from rest_framework.exceptions import ValidationError
+from django.db import transaction
 
 import random
 import requests
@@ -769,7 +770,7 @@ class QuestionAnswerListCreateView(generics.ListCreateAPIView):
         try:
             course = api_models.Course.objects.get(id=course_id)
             # Order by most recent first
-            return api_models.Question_Answer.objects.filter(course=course).order_by('-created_at')
+            return api_models.Question_Answer.objects.filter(course=course).order_by('-date')
         except api_models.Course.DoesNotExist:
             return api_models.Question_Answer.objects.none()
     

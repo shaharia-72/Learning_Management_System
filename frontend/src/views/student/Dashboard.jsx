@@ -318,7 +318,7 @@ function Dashboard() {
                                                             </div>
                                                             <div className="card-footer bg-white border-0 pt-0">
                                                                 <Link
-                                                                    to={`/student/course-detail/${UseData().user_id}/${c.course.enrollment_id}/`}
+                                                                    to={`/student/course-detail/${UseData().user_id}/${c.enrollment_id}/`}
                                                                     className={`btn w-100 ${isCompleted ? 'btn-success' : 'btn-primary'}`}
                                                                 >
                                                                     {isCompleted ? (

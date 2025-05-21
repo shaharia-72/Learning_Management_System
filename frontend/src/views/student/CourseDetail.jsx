@@ -1,718 +1,1021 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState, useRef } from 'react'
+import BaseHeader from '../partials/BaseHeader'
+import BaseFooter from '../partials/BaseFooter'
+import Sidebar from './Partials/Sidebar'
+import Header from './Partials/Header'
+import BaseSidebar from '../partials/BaseSidebar';
+import Toast from "../plugin/Toast";
+import ReactPlayer from 'react-player'
 import { Link } from 'react-router-dom';
-import ReactPlayer from 'react-player';
 import Button from 'react-bootstrap/Button';
 import Modal from 'react-bootstrap/Modal';
 import useAxios from '../../utils/useAxios';
 import UseData from '../plugin/UserData';
-import BaseSidebar from '../partials/BaseSidebar';
-import { Rating } from 'react-simple-star-rating';
-import { ToastContainer, toast } from 'react-toastify';
-import 'react-toastify/dist/ReactToastify.css';
-
+import { useParams } from 'react-router-dom'
+import moment from "moment";
 function CourseDetail() {
-  const [showLectureModal, setShowLectureModal] = useState(false);
-  const [currentLecture, setCurrentLecture] = useState(null);
-  const [noteShow, setNoteShow] = useState(false);
-  const [conversationShow, setConversationShow] = useState(false);
-  const [activeTab, setActiveTab] = useState('lectures');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [rating, setRating] = useState(0);
-  const [review, setReview] = useState('');
-  const [notes, setNotes] = useState([]);
-  const [newNote, setNewNote] = useState({ title: '', content: '' });
-  const [discussions, setDiscussions] = useState([]);
-  const [newDiscussion, setNewDiscussion] = useState({ title: '', message: '' });
-  const [currentDiscussion, setCurrentDiscussion] = useState(null);
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
 
+  const [variantItem, setVariantItem] = useState(null);
+  const [completionPercentage, setCompletionPercentage] = useState(0);
+  const [markAsCompletedStatus, setMarkAsCompletedStatus] = useState({});
+  const [createNote, setCreateNote] = useState({ title: "", note: "" });
+  const [selectedNote, setSelectedNote] = useState(null);
+  const [createMessage, setCreateMessage] = useState({
+    title: "",
+    message: "",
+  });
+  const [questions, setQuestions] = useState([]);
+  const [selectedConversation, setSelectedConversation] = useState(null);
+  const [createReview, setCreateReview] = useState({ rating: 1, review: "" });
+  const [studentReview, setStudentReview] = useState([]);
+
+
+  const [activeTab, setActiveTab] = useState('all');
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const axiosInstance = useAxios();
   const userData = UseData();
+  const param = useParams();
+  const [course, setCourse] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const lastElementRef = useRef();
+  console.log(param);
 
-  // Sample data - replace with your API calls
-  const courseLectures = [
-    {
-      id: 1,
-      title: "Introduction of Digital Marketing",
-      lectures: [
-        { id: 1, title: "Introduction", duration: "3m 9s", completed: true, premium: false },
-        { id: 2, title: "What is Digital Marketing", duration: "15m 10s", completed: true, premium: false },
-        { id: 3, title: "Type of Digital Marketing", duration: "18m 10s", completed: false, premium: true }
-      ]
-    },
-    {
-      id: 2,
-      title: "Customer Life cycle",
-      lectures: [
-        { id: 4, title: "What is Digital Marketing", duration: "11m 20s", completed: true, premium: false },
-        { id: 5, title: "15 Tips for Writing Magnetic Headlines", duration: "25m 20s", completed: false, premium: false },
-        { id: 6, title: "How to Write Like Your Customers Talk", duration: "11m 30s", completed: false, premium: false },
-        { id: 7, title: "How to Flip Features Into Benefits", duration: "35m 30s", completed: false, premium: true }
-      ]
+  // Play Lecture Modal
+  const [show, setShow] = useState(false);
+  const handleClose = () => setShow(false);
+  const handleShow = (variant_item) => {
+    setShow(true);
+    setVariantItem(variant_item);
+  };
+
+
+  const [noteShow, setNoteShow] = useState(false);
+  const handleNoteClose = () => setNoteShow(false);
+  const handleNoteShow = (note) => {
+    setNoteShow(true);
+    setSelectedNote(note);
+  };
+
+
+  const [ConversationShow, setConversationShow] = useState(false);
+  const handleConversationClose = () => setConversationShow(false);
+  const handleConversationShow = (converation) => {
+    setConversationShow(true);
+    setSelectedConversation(converation);
+  };
+
+
+  const [addQuestionShow, setAddQuestionShow] = useState(false);
+  const handleQuestionClose = () => setAddQuestionShow(false);
+  const handleQuestionShow = () => setAddQuestionShow(true);
+
+  useEffect(() => {
+    if (userData?.user_id && param?.enrollment_id) {
+      fetchCourseDetail();
     }
-  ];
+  }, []);
 
-  const handleLectureClick = (lecture) => {
-    setCurrentLecture(lecture);
-    setShowLectureModal(true);
+  // Move this OUTSIDE of useEffect
+  const fetchCourseDetail = async () => {
+    try {
+      setLoading(true);
+      const res = await axiosInstance.get(`/student/course-detail/${userData.user_id}/${param.enrollment_id}`);
+      setCourse(res.data);
+      console.log(res.data)
+      setQuestions(res.data.question_answer);
+      // Fix progress calculation to prevent default value
+      const totalLectures = res.data.lectures?.length || 0;
+      const completedLessons = res.data.completed_lesson?.length || 0;
+
+      // Only calculate percentage if there are lectures
+      const percentageCompleted = totalLectures > 0
+        ? (completedLessons / totalLectures) * 100
+        : 0; // Default to 0% if no lectures
+
+      setCompletionPercentage(percentageCompleted.toFixed(0));
+
+      // Create a map of completed lessons for easy lookup
+      const completedLessonsMap = {};
+      res.data.completed_lesson?.forEach(lesson => {
+        completedLessonsMap[lesson.variant_item.id] = true;
+      });
+      setMarkAsCompletedStatus(completedLessonsMap);
+
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching course detail:', err);
+      setError('Failed to load course details.');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleNoteSubmit = (e) => {
-    e.preventDefault();
-    setNotes([...notes, { ...newNote, id: notes.length + 1, date: new Date().toLocaleDateString() }]);
-    setNewNote({ title: '', content: '' });
-    setNoteShow(false);
-    toast.success('Note saved successfully!');
-  };
 
-  const handleDiscussionSubmit = (e) => {
-    e.preventDefault();
-    setDiscussions([...discussions, {
-      ...newDiscussion,
-      id: discussions.length + 1,
-      author: userData.name,
-      avatar: userData.avatar || 'https://randomuser.me/api/portraits/men/1.jpg',
-      date: new Date().toLocaleString(),
-      replies: []
-    }]);
-    setNewDiscussion({ title: '', message: '' });
-    toast.success('Discussion started!');
-  };
-
-  const handleMessageSubmit = (e) => {
-    e.preventDefault();
-    if (!newMessage.trim()) return;
-
-    setMessages([...messages, {
-      id: messages.length + 1,
-      author: userData.name,
-      avatar: userData.avatar || 'https://randomuser.me/api/portraits/men/1.jpg',
-      content: newMessage,
-      date: new Date().toLocaleTimeString()
-    }]);
-    setNewMessage('');
-  };
-
-  const handleReviewSubmit = (e) => {
-    e.preventDefault();
-    if (rating === 0) {
-      toast.error('Please select a rating');
+  const handleMarkLessonAsCompleted = (variantItemId) => {
+    if (markAsCompletedStatus[variantItemId]) {
+      // If already completed, don't do anything
       return;
     }
-    toast.success('Review submitted successfully!');
-    setRating(0);
-    setReview('');
+    const key = `lecture_${variantItemId}`;
+    setMarkAsCompletedStatus({
+      ...markAsCompletedStatus,
+      [key]: "Updating",
+    });
+
+    const formdata = new FormData();
+    formdata.append("user_id", userData?.user_id || 0);
+    formdata.append("course_id", course.course?.id);
+    formdata.append("variant_item_id", variantItemId);
+
+    axiosInstance
+      .post(`student/course-completed/`, formdata)
+      .then((res) => {
+        fetchCourseDetail();
+        setMarkAsCompletedStatus((prev) => ({
+          ...prev,
+          [key]: "Updated",
+        }));
+      });
   };
 
-  // Calculate course progress
-  const totalLectures = courseLectures.reduce((acc, section) => acc + section.lectures.length, 0);
-  const completedLectures = courseLectures.reduce((acc, section) =>
-    acc + section.lectures.filter(lecture => lecture.completed).length, 0);
-  const progressPercentage = Math.round((completedLectures / totalLectures) * 100);
+  const CourseProgressBar = () => {
+    return (
+      <div className="progress mb-3" style={{ height: "20px", borderRadius: "10px" }}>
+        <div
+          className="progress-bar bg-success"
+          role="progressbar"
+          style={{
+            width: `${completionPercentage}%`,
+            transition: "width 0.5s ease-in-out"
+          }}
+          aria-valuenow={completionPercentage}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
+          {completionPercentage}% Completed
+        </div>
+      </div>
+    );
+  };
+
+
+  // handle Note js
+  const handleNoteChange = (event) => {
+    setCreateNote({
+      ...createNote,
+      [event.target.name]: event.target.value,
+    });
+  };
+
+  const handleSubmitCreateNote = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+
+    formdata.append("user_id", userData?.user_id);
+    formdata.append("enrollment_id", param.enrollment_id);
+    formdata.append("title", createNote.title);
+    formdata.append("note", createNote.note);
+
+    try {
+      await axiosInstance
+        .post(
+          `student/course-note/${userData?.user_id}/${param.enrollment_id}/`,
+          formdata
+        )
+        .then((res) => {
+          fetchCourseDetail();
+          handleNoteClose();
+          Toast().fire({
+            icon: "success",
+            title: "Note created",
+          });
+        });
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  const handleSubmitEditNote = (e, noteId) => {
+    e.preventDefault();
+    const formdata = new FormData();
+
+    formdata.append("user_id", userData?.user_id);
+    formdata.append("enrollment_id", param.enrollment_id);
+    formdata.append("title", createNote.title || selectedNote?.title);
+    formdata.append("note", createNote.note || selectedNote?.note);
+
+    axiosInstance
+      .patch(
+        `student/course-note-detail/${userData?.user_id}/${param.enrollment_id}/${noteId}/`,
+        formdata
+      )
+      .then((res) => {
+        fetchCourseDetail();
+        Toast().fire({
+          icon: "success",
+          title: "Note updated",
+        });
+      });
+  };
+
+  const handleDeleteNote = (noteId) => {
+    axiosInstance
+      .delete(
+        `student/course-note-detail/${userData?.user_id}/${param.enrollment_id}/${noteId}/`
+      )
+      .then((res) => {
+        fetchCourseDetail();
+        Toast().fire({
+          icon: "success",
+          title: "Note deleted",
+        });
+      });
+  };
+
+
+  // Handel message and questions
+  const handleMessageChange = (event) => {
+    setCreateMessage({
+      ...createMessage,
+      [event.target.name]: event.target.value,
+    });
+  };
+
+  const handleSaveQuestion = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+
+    formdata.append("course_id", course.course?.id);
+    formdata.append("user_id", userData?.user_id);
+    formdata.append("title", createMessage.title);
+    formdata.append("message", createMessage.message);
+
+    await axiosInstance
+      .post(
+        `student/question-answer-list-create/${course.course?.id}/`,
+        formdata
+      )
+      .then((res) => {
+        fetchCourseDetail();
+        handleQuestionClose();
+        Toast().fire({
+          icon: "success",
+          title: "Question sent",
+        });
+      });
+  };
+
+  const sendNewMessage = async (e) => {
+    e.preventDefault();
+    const formdata = new FormData();
+    formdata.append("course_id", course.course?.id);
+    formdata.append("user_id", userData?.user_id);
+    formdata.append("message", createMessage.message);
+    formdata.append("qa_id", selectedConversation?.qa_id);
+
+    axiosInstance
+      .post(`student/question-answer-message-create/`, formdata)
+      .then((res) => {
+        console.log(res.data);
+        setSelectedConversation(res.data.question);
+      });
+  };
+
+  useEffect(() => {
+    if (lastElementRef.current) {
+      lastElementRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [selectedConversation]);
+
+  const handleSearchQuestion = (event) => {
+    const query = event.target.value.toLowerCase();
+    if (query === "") {
+      fetchCourseDetail();
+    } else {
+      const filtered = questions?.filter((question) => {
+        return question.title.toLowerCase().includes(query);
+      });
+      setQuestions(filtered);
+    }
+  };
+
 
   return (
     <>
-      <ToastContainer position="top-right" autoClose={3000} />
+      {/* <BaseHeader /> */}
 
-      <div className="course-detail-container">
-        <BaseSidebar
-          sidebarCollapsed={sidebarCollapsed}
-          setSidebarCollapsed={setSidebarCollapsed}
-          user={userData}
-        />
+      <section className=" pb-5">
+        <div className="container">
+          <BaseSidebar
+            sidebarCollapsed={sidebarCollapsed}
+            setSidebarCollapsed={setSidebarCollapsed}
+            user={userData}
+          />
+          {/* Header Here */}
+          {/* <Header /> */}
+          <div className="main-content">
 
-        <main className={`main-content ${sidebarCollapsed ? 'collapsed' : ''}`}>
-          <div className="container-fluid py-4">
-            {/* Course Progress */}
-            <div className="card shadow-sm mb-4">
-              <div className="card-body">
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <h5 className="mb-0">Course Progress</h5>
-                  <span className="badge bg-primary">{progressPercentage}% Complete</span>
+            {/* Sidebar Here */}
+            {/* <Sidebar /> */}
+
+            <div className="col-lg-9 col-md-8 col-12">
+              {/* <section className="bg-blue py-7">
+                <div className="container">
+                  <ReactPlayer url='https://www.youtube.com/watch?v=LXb3EKWsInQ' width={"100%"} height={600} />
                 </div>
-                <div className="progress" style={{ height: '10px' }}>
-                  <div
-                    className="progress-bar bg-success progress-bar-striped progress-bar-animated"
-                    role="progressbar"
-                    style={{ width: `${progressPercentage}%` }}
-                    aria-valuenow={progressPercentage}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                  ></div>
-                </div>
-              </div>
-            </div>
+              </section> */}
+              <section className="mt-4">
+                <div className="container">
+                  <div className="row">
+                    {/* Main content START */}
+                    <div className="col-12">
+                      <div className="card shadow rounded-2 p-0 mt-n5">
+                        {/* Tabs START */}
+                        <div className="card-header border-bottom px-4 pt-3 pb-0">
+                          <ul
+                            className="nav nav-bottom-line py-0"
+                            id="course-pills-tab"
+                            role="tablist"
+                          >
+                            {/* Tab item */}
+                            <li className="nav-item me-2 me-sm-4" role="presentation">
+                              <button className="nav-link mb-2 mb-md-0 active" id="course-pills-tab-1" data-bs-toggle="pill" data-bs-target="#course-pills-1" type="button" role="tab" aria-controls="course-pills-1" aria-selected="true">
+                                Course Lectures
+                              </button>
+                            </li>
+                            {/* Tab item */}
+                            <li className="nav-item me-2 me-sm-4" role="presentation">
+                              <button
+                                className="nav-link mb-2 mb-md-0"
+                                id="course-pills-tab-2"
+                                data-bs-toggle="pill"
+                                data-bs-target="#course-pills-2"
+                                type="button"
+                                role="tab"
+                                aria-controls="course-pills-2"
+                                aria-selected="false"
+                              >
+                                Notes
+                              </button>
+                            </li>
+                            {/* Tab item */}
+                            <li className="nav-item me-2 me-sm-4" role="presentation">
+                              <button
+                                className="nav-link mb-2 mb-md-0"
+                                id="course-pills-tab-3"
+                                data-bs-toggle="pill"
+                                data-bs-target="#course-pills-3"
+                                type="button"
+                                role="tab"
+                                aria-controls="course-pills-3"
+                                aria-selected="false"
+                              >
+                                Discussion
+                              </button>
+                            </li>
 
-            {/* Course Content Tabs */}
-            <div className="card shadow-sm">
-              <div className="card-header border-bottom bg-white">
-                <ul className="nav nav-tabs card-header-tabs" id="courseTabs" role="tablist">
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${activeTab === 'lectures' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('lectures')}
-                    >
-                      <i className="fas fa-play-circle me-2"></i> Lectures
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${activeTab === 'notes' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('notes')}
-                    >
-                      <i className="fas fa-sticky-note me-2"></i> Notes
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${activeTab === 'discussions' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('discussions')}
-                    >
-                      <i className="fas fa-comments me-2"></i> Discussions
-                    </button>
-                  </li>
-                  <li className="nav-item" role="presentation">
-                    <button
-                      className={`nav-link ${activeTab === 'review' ? 'active' : ''}`}
-                      onClick={() => setActiveTab('review')}
-                    >
-                      <i className="fas fa-star me-2"></i> Leave Review
-                    </button>
-                  </li>
-                </ul>
-              </div>
-
-              <div className="card-body p-0">
-                {/* Lectures Tab */}
-                {activeTab === 'lectures' && (
-                  <div className="p-4">
-                    {courseLectures.map((section) => (
-                      <div key={section.id} className="mb-4">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                          <h5 className="mb-0">{section.title}</h5>
-                          <span className="badge bg-light text-dark">
-                            {section.lectures.length} Lectures
-                          </span>
+                            <li className="nav-item me-2 me-sm-4" role="presentation">
+                              <button
+                                className="nav-link mb-2 mb-md-0"
+                                id="course-pills-tab-4"
+                                data-bs-toggle="pill"
+                                data-bs-target="#course-pills-4"
+                                type="button"
+                                role="tab"
+                                aria-controls="course-pills-4"
+                                aria-selected="false"
+                              >
+                                Leave a Review
+                              </button>
+                            </li>
+                          </ul>
                         </div>
-
-                        <div className="list-group">
-                          {section.lectures.map((lecture) => (
+                        {/* Tabs END */}
+                        {/* Tab contents START */}
+                        <div className="card-body p-sm-4">
+                          <div className="tab-content" id="course-pills-tabContent">
+                            {/* Content START */}
                             <div
-                              key={lecture.id}
-                              className={`list-group-item list-group-item-action d-flex justify-content-between align-items-center ${lecture.completed ? 'bg-light-success' : ''}`}
-                              onClick={() => handleLectureClick(lecture)}
-                              style={{ cursor: 'pointer' }}
+                              className="tab-pane fade show active"
+                              id="course-pills-1"
+                              role="tabpanel"
+                              aria-labelledby="course-pills-tab-1"
                             >
-                              <div className="d-flex align-items-center">
-                                <div className="me-3">
-                                  {lecture.completed ? (
-                                    <i className="fas fa-check-circle text-success"></i>
-                                  ) : lecture.premium ? (
-                                    <i className="fas fa-lock text-warning"></i>
-                                  ) : (
-                                    <i className="fas fa-play-circle text-primary"></i>
-                                  )}
+                              {/* Accordion START */}
+                              <div
+                                className="accordion accordion-icon accordion-border"
+                                id="accordionExample2"
+                              >
+
+                                <div className="progress mb-3">
+                                  <div
+                                    className="progress-bar"
+                                    role="progressbar"
+                                    style={{
+                                      width: `${completionPercentage}%`,
+                                    }}
+                                    aria-valuenow={completionPercentage}
+                                    aria-valuemin={0}
+                                    aria-valuemax={100}
+                                  >
+                                    {completionPercentage}%
+                                  </div>
                                 </div>
-                                <div>
-                                  <h6 className="mb-0">{lecture.title}</h6>
-                                  {lecture.premium && (
-                                    <span className="badge bg-warning text-dark small mt-1">
-                                      Premium Content
-                                    </span>
+                                {/* Item */}
+                                {course?.curriculum?.map((c, index) => (
+                                  <div className="accordion-item mb-3" key={c.variant_id}>
+                                    <h6 className="accordion-header font-base" id={`heading-${c.variant_id}`}>
+                                      <button
+                                        className="accordion-button fw-bold rounded d-sm-flex d-inline-block"
+                                        type="button"
+                                        data-bs-toggle="collapse"
+                                        data-bs-target={`#collapse-${c.variant_id}`}
+                                        aria-expanded={index === 0 ? "true" : "false"}
+                                        aria-controls={`collapse-${c.variant_id}`}
+                                        className={`accordion-button fw-bold rounded d-sm-flex d-inline-block ${index !== 0 ? "collapsed" : ""}`}
+                                      >
+                                        {c.title}
+                                        <span className="small ms-0 ms-sm-2">
+                                          ({c.variant_items?.length || 0} Lectures)
+                                        </span>
+                                      </button>
+                                    </h6>
+                                    <div
+                                      id={`collapse-${c.variant_id}`}
+                                      className={`accordion-collapse collapse ${index === 0 ? "show" : ""}`}
+                                      aria-labelledby={`heading-${c.variant_id}`}
+                                      data-bs-parent="#accordionExample2"
+                                    >
+                                      <div className="accordion-body mt-3">
+                                        {/* Course lecture */}
+                                        {c.variant_items?.map((l, index) => (
+                                          <>
+                                            <div className="d-flex justify-content-between align-items-center">
+                                              <div className="position-relative d-flex align-items-center">
+                                                <button
+                                                  onClick={() => handleShow(l)}
+                                                  className="btn btn-danger-soft btn-round btn-sm mb-0 stretched-link position-static"
+                                                >
+                                                  <i className="fas fa-play me-0" />
+                                                </button>
+                                                <span className="d-inline-block text-truncate ms-2 mb-0 h6 fw-light w-100px w-sm-200px w-md-400px">
+                                                  {l.title}
+                                                </span>
+                                              </div>
+                                              <div className="d-flex">
+                                                <p className="mb-0">
+                                                  {l.content_duration ||
+                                                    "0m 0s"}
+                                                </p>
+                                                <input
+                                                  type="checkbox"
+                                                  className="form-check-input ms-2"
+                                                  name=""
+                                                  id=""
+                                                  onChange={() =>
+                                                    handleMarkLessonAsCompleted(
+                                                      l.variant_item_id
+                                                    )
+                                                  }
+                                                  checked={course.completed_lesson?.some(
+                                                    (cl) =>
+                                                      cl.variant_item.id ===
+                                                      l.id
+                                                  )}
+                                                />
+                                              </div>
+                                            </div>
+                                            <hr />
+                                          </>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+
+
+
+                              </div>
+                              {/* Accordion END */}
+                            </div>
+                            <div
+                              className="tab-pane fade"
+                              id="course-pills-2"
+                              role="tabpanel"
+                              aria-labelledby="course-pills-tab-2"
+                            >
+                              <div className="card">
+                                <div className="card-header border-bottom p-0 pb-3">
+                                  <div className="d-sm-flex justify-content-between align-items-center">
+                                    <h4 className="mb-0 p-3">All Notes</h4>
+                                    {/* Add Note Modal */}
+                                    <button
+                                      type="button"
+                                      className="btn btn-primary me-3"
+                                      data-bs-toggle="modal"
+                                      data-bs-target="#exampleModal"
+                                    >
+                                      Add Note <i className="fas fa-pen"></i>
+                                    </button>
+                                    <div
+                                      className="modal fade"
+                                      id="exampleModal"
+                                      tabIndex={-1}
+                                      aria-labelledby="exampleModalLabel"
+                                      aria-hidden="true"
+                                    >
+                                      <div className="modal-dialog modal-dialog-centered">
+                                        <div className="modal-content">
+                                          <div className="modal-header">
+                                            <h5
+                                              className="modal-title"
+                                              id="exampleModalLabel"
+                                            >
+                                              Add New Note{" "}
+                                              <i className="fas fa-pen"></i>
+                                            </h5>
+                                            <button
+                                              type="button"
+                                              className="btn-close"
+                                              data-bs-dismiss="modal"
+                                              aria-label="Close"
+                                            />
+                                          </div>
+                                          <div className="modal-body">
+                                            <form
+                                              onSubmit={handleSubmitCreateNote}
+                                            >
+                                              <div className="mb-3">
+                                                <label
+                                                  htmlFor="exampleInputEmail1"
+                                                  className="form-label"
+                                                >
+                                                  Note Title
+                                                </label>
+                                                <input
+                                                  type="text"
+                                                  className="form-control"
+                                                  name="title"
+                                                  onChange={handleNoteChange}
+                                                />
+                                              </div>
+                                              <div className="mb-3">
+                                                <label
+                                                  htmlFor="exampleInputPassword1"
+                                                  className="form-label"
+                                                >
+                                                  Note Content
+                                                </label>
+                                                <textarea
+                                                  className="form-control"
+                                                  id=""
+                                                  cols="30"
+                                                  rows="10"
+                                                  name="note"
+                                                  onChange={handleNoteChange}
+                                                ></textarea>
+                                              </div>
+                                              <button
+                                                type="button"
+                                                className="btn btn-secondary me-2"
+                                                data-bs-dismiss="modal"
+                                              >
+                                                <i className="fas fa-arrow-left"></i>{" "}
+                                                Close
+                                              </button>
+                                              <button
+                                                type="submit"
+                                                className="btn btn-primary"
+                                              >
+                                                Save Note{" "}
+                                                <i className="fas fa-check-circle"></i>
+                                              </button>
+                                            </form>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="card-body p-0 pt-3">
+                                  {/* Note item start */}
+                                  {course?.note?.map((n, index) => (
+                                    <div className="row g-4 p-3">
+                                      <div className="col-sm-11 col-xl-11 shadow p-3 m-3 rounded">
+                                        <h5> {n.title}</h5>
+                                        <p>{n.note}</p>
+                                        {/* Buttons */}
+                                        <div className="hstack gap-3 flex-wrap">
+                                          <a
+                                            onClick={() => handleNoteShow(n)}
+                                            className="btn btn-success mb-0"
+                                          >
+                                            <i className="bi bi-pencil-square me-2" />{" "}
+                                            Edit
+                                          </a>
+                                          <a
+                                            onClick={() =>
+                                              handleDeleteNote(n.id)
+                                            }
+                                            className="btn btn-danger mb-0"
+                                          >
+                                            <i className="bi bi-trash me-2" />{" "}
+                                            Delete
+                                          </a>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  ))}
+
+                                  {course?.note?.length < 1 && (
+                                    <p className="mt-3 p-3">No notes</p>
                                   )}
+                                  <hr />
                                 </div>
                               </div>
-                              <span className="badge bg-light text-dark">{lecture.duration}</span>
                             </div>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                            <div
+                              className="tab-pane fade"
+                              id="course-pills-3"
+                              role="tabpanel"
+                              aria-labelledby="course-pills-tab-3"
+                            >
+                              <div className="card">
+                                {/* Card header */}
+                                <div className="card-header border-bottom p-0 pb-3">
+                                  {/* Title */}
+                                  <h4 className="mb-3 p-3">Discussion</h4>
+                                  <form className="row g-4 p-3">
+                                    {/* Search */}
+                                    <div className="col-sm-6 col-lg-9">
+                                      <div className="position-relative">
+                                        <input
+                                          className="form-control pe-5 bg-transparent"
+                                          type="search"
+                                          placeholder="Search"
+                                          aria-label="Search"
+                                          onChange={handleSearchQuestion}
+                                        />
+                                        <button
+                                          className="bg-transparent p-2 position-absolute top-50 end-0 translate-middle-y border-0 text-primary-hover text-reset"
+                                          type="submit"
+                                        >
+                                          <i className="fas fa-search fs-6 " />
+                                        </button>
+                                      </div>
+                                    </div>
+                                    <div className="col-sm-6 col-lg-3">
+                                      <a
+                                        onClick={handleQuestionShow}
+                                        className="btn btn-primary mb-0 w-100"
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#modalCreatePost"
+                                      >
+                                        Ask Question
+                                      </a>
+                                    </div>
+                                  </form>
+                                </div>
+                                {/* Card body */}
+                                <div className="card-body p-0 pt-3">
+                                  <div className="vstack gap-3 p-3">
 
-                {/* Notes Tab */}
-                {activeTab === 'notes' && (
-                  <div className="p-4">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                      <h5>My Notes</h5>
-                      <button
-                        className="btn btn-primary"
-                        onClick={() => setNoteShow(true)}
-                      >
-                        <i className="fas fa-plus me-2"></i> Add Note
-                      </button>
-                    </div>
+                                    {/* Question item START */}
+                                    {questions?.map((q, index) => (
+                                      <div
+                                        className="shadow rounded-3 p-3"
+                                        key={index}
+                                      >
+                                        <div className="d-sm-flex justify-content-sm-between mb-3">
+                                          <div className="d-flex align-items-center">
+                                            <div className="avatar avatar-sm flex-shrink-0">
 
-                    {notes.length === 0 ? (
-                      <div className="text-center py-5">
-                        <i className="fas fa-sticky-note fa-3x text-muted mb-3"></i>
-                        <h5>No Notes Yet</h5>
-                        <p className="text-muted">Add your first note to get started</p>
-                        <button
-                          className="btn btn-primary"
-                          onClick={() => setNoteShow(true)}
-                        >
-                          Create Note
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="row g-4">
-                        {notes.map((note) => (
-                          <div key={note.id} className="col-md-6">
-                            <div className="card h-100 shadow-sm">
-                              <div className="card-body">
-                                <h5 className="card-title">{note.title}</h5>
-                                <p className="card-text text-muted">{note.content.substring(0, 150)}...</p>
-                                <div className="d-flex justify-content-between align-items-center">
-                                  <small className="text-muted">{note.date}</small>
-                                  <div>
-                                    <button
-                                      className="btn btn-sm btn-outline-primary me-2"
-                                      onClick={() => {
-                                        setNewNote({ title: note.title, content: note.content });
-                                        setNoteShow(true);
-                                      }}
-                                    >
-                                      <i className="fas fa-edit"></i>
-                                    </button>
-                                    <button className="btn btn-sm btn-outline-danger">
-                                      <i className="fas fa-trash"></i>
-                                    </button>
+                                              {/* <img
+                                                src={q.profile.image}
+                                                className="avatar-img rounded-circle"
+                                                alt="avatar"
+                                                style={{
+                                                  width: "60px",
+                                                  height: "60px",
+                                                  borderRadius: "50%",
+                                                  objectFit: "cover",
+                                                }}
+                                              /> */}
+                                            </div>
+                                            <div className="ms-2">
+                                              <h6 className="mb-0">
+                                                <a
+                                                  href="#"
+                                                  className="text-decoration-none text-dark"
+                                                >
+                                                  {q.profile.first_name}
+                                                </a>
+                                              </h6>
+                                              <small>
+                                                {moment(q.date_created).format(
+                                                  "DD MMM, YYYY"
+                                                )}
+                                              </small>
+                                            </div>
+                                          </div>
+                                        </div>
+                                        <h5>{q.title}</h5>
+                                        <button
+                                          className="btn btn-primary btn-sm mb-3 mt-3"
+                                          onClick={() =>
+                                            handleConversationShow(q)
+                                          }
+                                        >
+                                          Join Conversation{" "}
+                                          <i className="fas fa-arrow-right"></i>
+                                        </button>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                            <div
+                              className="tab-pane fade"
+                              id="course-pills-4"
+                              role="tabpanel"
+                              aria-labelledby="course-pills-tab-4"
+                            >
+                              <div className="card">
+                                {/* Card header */}
+                                <div className="card-header border-bottom p-0 pb-3">
+                                  {/* Title */}
+                                  <h4 className="mb-3 p-3">Leave a Review</h4>
+                                  <div className="mt-2">
+                                    <form className="row g-3 p-3">
+
+                                      {/* Rating */}
+                                      <div className="col-12 bg-light-input">
+                                        <select
+                                          id="inputState2"
+                                          className="form-select js-choice"
+                                        >
+                                          <option value={1}>★☆☆☆☆ (1/5)</option>
+                                          <option value={2}>★★☆☆☆ (2/5)</option>
+                                          <option value={3}>★★★☆☆ (3/5)</option>
+                                          <option value={4}>★★★★☆ (4/5)</option>
+                                          <option value={5}>★★★★★ (5/5)</option>
+                                        </select>
+                                      </div>
+                                      {/* Message */}
+                                      <div className="col-12 bg-light-input">
+                                        <textarea
+                                          className="form-control"
+                                          id="exampleFormControlTextarea1"
+                                          placeholder="Your review"
+                                          rows={3}
+                                          defaultValue={""}
+                                        />
+                                      </div>
+                                      {/* Button */}
+                                      <div className="col-12">
+                                        <button type="submit" className="btn btn-primary mb-0">
+                                          Post Review
+                                        </button>
+                                      </div>
+                                    </form>
                                   </div>
                                 </div>
                               </div>
                             </div>
                           </div>
-                        ))}
+                        </div>
                       </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Discussions Tab */}
-                {activeTab === 'discussions' && (
-                  <div className="p-4">
-                    <div className="d-flex justify-content-between align-items-center mb-4">
-                      <h5>Course Discussions</h5>
-                      <button
-                        className="btn btn-primary"
-                        data-bs-toggle="modal"
-                        data-bs-target="#newDiscussionModal"
-                      >
-                        <i className="fas fa-plus me-2"></i> New Discussion
-                      </button>
                     </div>
-
-                    {discussions.length === 0 ? (
-                      <div className="text-center py-5">
-                        <i className="fas fa-comments fa-3x text-muted mb-3"></i>
-                        <h5>No Discussions Yet</h5>
-                        <p className="text-muted">Be the first to start a discussion</p>
-                        <button
-                          className="btn btn-primary"
-                          data-bs-toggle="modal"
-                          data-bs-target="#newDiscussionModal"
-                        >
-                          Start Discussion
-                        </button>
-                      </div>
-                    ) : (
-                      <div className="list-group">
-                        {discussions.map((discussion) => (
-                          <div
-                            key={discussion.id}
-                            className="list-group-item list-group-item-action"
-                            onClick={() => {
-                              setCurrentDiscussion(discussion);
-                              setConversationShow(true);
-                            }}
-                            style={{ cursor: 'pointer' }}
-                          >
-                            <div className="d-flex">
-                              <img
-                                src={discussion.avatar}
-                                alt={discussion.author}
-                                className="rounded-circle me-3"
-                                width="48"
-                                height="48"
-                              />
-                              <div>
-                                <div className="d-flex justify-content-between align-items-center">
-                                  <h6 className="mb-0">{discussion.title}</h6>
-                                  <small className="text-muted">{discussion.date}</small>
-                                </div>
-                                <p className="mb-1 text-muted">{discussion.author}</p>
-                                <p className="mb-0">{discussion.message.substring(0, 100)}...</p>
-                                <div className="mt-2">
-                                  <span className="badge bg-light text-dark me-2">
-                                    <i className="fas fa-comment me-1"></i>
-                                    {discussion.replies.length} Replies
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
                   </div>
-                )}
-
-                {/* Review Tab */}
-                {activeTab === 'review' && (
-                  <div className="p-4">
-                    <div className="text-center mb-4">
-                      <h4>Rate This Course</h4>
-                      <p className="text-muted">Share your experience to help others</p>
-                    </div>
-
-                    <form onSubmit={handleReviewSubmit}>
-                      <div className="mb-4 text-center">
-                        <Rating
-                          onClick={(rate) => setRating(rate)}
-                          ratingValue={rating}
-                          size={40}
-                          transition
-                          fillColor="#ffc107"
-                          emptyColor="#e4e5e9"
-                          className="rating-stars"
-                        />
-                      </div>
-
-                      <div className="mb-4">
-                        <label htmlFor="reviewText" className="form-label">Your Review</label>
-                        <textarea
-                          className="form-control"
-                          id="reviewText"
-                          rows="5"
-                          value={review}
-                          onChange={(e) => setReview(e.target.value)}
-                          placeholder="Share your thoughts about this course..."
-                        ></textarea>
-                      </div>
-
-                      <div className="text-center">
-                        <button type="submit" className="btn btn-primary px-4">
-                          <i className="fas fa-paper-plane me-2"></i> Submit Review
-                        </button>
-                      </div>
-                    </form>
-                  </div>
-                )}
-              </div>
+                </div>
+              </section>
             </div>
-          </div>
-        </main>
 
-        {/* Lecture Modal */}
-        <Modal show={showLectureModal} onHide={() => setShowLectureModal(false)} size="xl" centered>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              {currentLecture && (
-                <>
-                  <i className="fas fa-play-circle me-2 text-primary"></i>
-                  {currentLecture.title}
-                </>
-              )}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <div className="ratio ratio-16x9">
-              <ReactPlayer
-                url="https://www.youtube.com/watch?v=LXb3EKWsInQ"
-                width="100%"
-                height="100%"
-                controls
-                playing
+          </div>
+
+        </div >
+      </section >
+
+
+
+      {/* Lecture Modal */}
+      < Modal show={show} size="lg" onHide={handleClose} >
+        <Modal.Header closeButton>
+          <Modal.Title>Lesson: {variantItem?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <ReactPlayer
+            url={variantItem?.file}
+            controls
+            playing
+            width={"100%"}
+            height={"100%"}
+          />
+        </Modal.Body>
+        <Modal.Footer>
+          <Button variant="secondary" onClick={handleClose}>
+            Close
+          </Button>
+        </Modal.Footer>
+      </Modal >
+
+      {/* Note Edit Modal */}
+      <Modal show={noteShow} size="lg" onHide={handleNoteClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Note: {selectedNote?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={(e) => handleSubmitEditNote(e, selectedNote?.id)}>
+            <div className="mb-3">
+              <label htmlFor="exampleInputEmail1" className="form-label">
+                Note Title
+              </label>
+              <input
+                defaultValue={selectedNote?.title}
+                name="title"
+                onChange={handleNoteChange}
+                type="text"
+                className="form-control"
               />
             </div>
-          </Modal.Body>
-          <Modal.Footer className="d-flex justify-content-between">
-            <Button variant="outline-secondary" onClick={() => setShowLectureModal(false)}>
-              <i className="fas fa-times me-2"></i> Close
-            </Button>
-            <div>
-              <Button variant="outline-primary me-2">
-                <i className="fas fa-sticky-note me-2"></i> Take Notes
-              </Button>
-              <Button variant="primary">
-                <i className="fas fa-check-circle me-2"></i> Mark Complete
-              </Button>
+            <div className="mb-3">
+              <label htmlFor="exampleInputPassword1" className="form-label">
+                Note Content
+              </label>
+              <textarea
+                defaultValue={selectedNote?.note}
+                name="note"
+                onChange={handleNoteChange}
+                className="form-control"
+                cols="30"
+                rows="10"
+              ></textarea>
             </div>
-          </Modal.Footer>
-        </Modal>
+            <button
+              type="button"
+              className="btn btn-secondary me-2"
+              onClick={handleNoteClose}
+            >
+              <i className="fas fa-arrow-left"></i> Close
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Save Note <i className="fas fa-check-circle"></i>
+            </button>
+          </form>
+        </Modal.Body>
+      </Modal>
 
-        {/* Note Modal */}
-        <Modal show={noteShow} onHide={() => {
-          setNoteShow(false);
-          setNewNote({ title: '', content: '' });
-        }} centered>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              <i className="fas fa-sticky-note me-2 text-primary"></i>
-              {newNote.id ? 'Edit Note' : 'Add New Note'}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <form onSubmit={handleNoteSubmit}>
-              <div className="mb-3">
-                <label className="form-label">Note Title</label>
-                <input
-                  type="text"
-                  className="form-control"
-                  value={newNote.title}
-                  onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-                  required
-                />
-              </div>
-              <div className="mb-3">
-                <label className="form-label">Content</label>
-                <textarea
-                  className="form-control"
-                  rows="8"
-                  value={newNote.content}
-                  onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-                  required
-                ></textarea>
-              </div>
-              <div className="d-flex justify-content-end">
-                <Button
-                  variant="outline-secondary"
-                  className="me-2"
-                  onClick={() => {
-                    setNoteShow(false);
-                    setNewNote({ title: '', content: '' });
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button variant="primary" type="submit">
-                  Save Note
-                </Button>
-              </div>
-            </form>
-          </Modal.Body>
-        </Modal>
-
-        {/* Discussion Modal */}
-        <Modal show={conversationShow} onHide={() => setConversationShow(false)} size="lg" centered>
-          <Modal.Header closeButton>
-            <Modal.Title>
-              <i className="fas fa-comments me-2 text-primary"></i>
-              {currentDiscussion && currentDiscussion.title}
-            </Modal.Title>
-          </Modal.Header>
-          <Modal.Body>
-            <div className="discussion-container">
-              <div className="discussion-messages">
-                {messages.length === 0 ? (
-                  <div className="text-center py-4">
-                    <i className="fas fa-comment-slash fa-3x text-muted mb-3"></i>
-                    <h5>No Messages Yet</h5>
-                    <p className="text-muted">Be the first to reply to this discussion</p>
-                  </div>
-                ) : (
-                  messages.map((message) => (
-                    <div key={message.id} className="message mb-3">
-                      <div className="d-flex">
+      {/* Conversation Modal */}
+      <Modal show={ConversationShow} size="lg" onHide={handleConversationClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Lesson: {selectedConversation?.title}</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <div className="border p-2 p-sm-4 rounded-3">
+            <ul
+              className="list-unstyled mb-0"
+              style={{ overflowY: "scroll", height: "500px" }}
+            >
+              {selectedConversation?.messages?.map((m, index) => (
+                <li className="comment-item mb-3">
+                  <div className="d-flex">
+                    <div className="avatar avatar-sm flex-shrink-0">
+                      <a href="#">
                         <img
-                          src={message.avatar}
-                          alt={message.author}
-                          className="rounded-circle me-3"
-                          width="40"
-                          height="40"
+                          className="avatar-img rounded-circle"
+                          src={
+                            m.profile.image?.startsWith("http://127.0.0.1:8000")
+                              ? m.profile.image
+                              : `http://127.0.0.1:8000${m.profile.image}`
+                          }
+                          style={{
+                            width: "40px",
+                            height: "40px",
+                            borderRadius: "50%",
+                            objectFit: "cover",
+                          }}
+                          alt="womans image"
                         />
-                        <div>
-                          <div className="d-flex align-items-center mb-1">
-                            <strong className="me-2">{message.author}</strong>
-                            <small className="text-muted">{message.date}</small>
-                          </div>
-                          <div className="message-bubble p-3 rounded">
-                            {message.content}
+                      </a>
+                    </div>
+                    <div className="ms-2">
+                      {/* Comment by */}
+                      <div className="bg-light p-3 rounded w-100">
+                        <div className="d-flex w-100 justify-content-center">
+                          <div className="me-2 ">
+                            <h6 className="mb-1 lead fw-bold">
+                              <a
+                                href="#!"
+                                className="text-decoration-none text-dark"
+                              >
+                                {" "}
+                                {m.profile.first_name}{" "}
+                              </a>
+                              <br />
+                              <span style={{ fontSize: "12px", color: "gray" }}>
+                                {moment(m.date).format("DD MMM, YYYY")}
+                              </span>
+                            </h6>
+                            <p className="mb-0 mt-3  ">{m.message}</p>
                           </div>
                         </div>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  </div>
+                </li>
+              ))}
 
-              <form onSubmit={handleMessageSubmit} className="mt-4">
-                <div className="input-group">
-                  <input
-                    type="text"
-                    className="form-control"
-                    placeholder="Type your message..."
-                    value={newMessage}
-                    onChange={(e) => setNewMessage(e.target.value)}
-                  />
-                  <button className="btn btn-primary" type="submit">
-                    <i className="fas fa-paper-plane"></i>
-                  </button>
-                </div>
-              </form>
-            </div>
-          </Modal.Body>
-        </Modal>
+              <div ref={lastElementRef}></div>
+            </ul>
 
-        {/* New Discussion Modal */}
-        <div className="modal fade" id="newDiscussionModal" tabIndex="-1" aria-hidden="true">
-          <div className="modal-dialog modal-dialog-centered">
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  <i className="fas fa-plus-circle me-2 text-primary"></i>
-                  New Discussion
-                </h5>
-                <button type="button" className="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-              </div>
-              <div className="modal-body">
-                <form onSubmit={handleDiscussionSubmit}>
-                  <div className="mb-3">
-                    <label className="form-label">Discussion Title</label>
-                    <input
-                      type="text"
-                      className="form-control"
-                      value={newDiscussion.title}
-                      onChange={(e) => setNewDiscussion({ ...newDiscussion, title: e.target.value })}
-                      required
-                    />
-                  </div>
-                  <div className="mb-3">
-                    <label className="form-label">Your Question/Message</label>
-                    <textarea
-                      className="form-control"
-                      rows="5"
-                      value={newDiscussion.message}
-                      onChange={(e) => setNewDiscussion({ ...newDiscussion, message: e.target.value })}
-                      required
-                    ></textarea>
-                  </div>
-                  <div className="d-flex justify-content-end">
-                    <button
-                      type="button"
-                      className="btn btn-outline-secondary me-2"
-                      data-bs-dismiss="modal"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-primary"
-                      data-bs-dismiss="modal"
-                    >
-                      Post Discussion
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            <form class="w-100 d-flex" onSubmit={sendNewMessage}>
+              <textarea
+                name="message"
+                class="one form-control pe-4 bg-light w-75"
+                id="autoheighttextarea"
+                rows="2"
+                onChange={handleMessageChange}
+                placeholder="What's your question?"
+              ></textarea>
+              <button class="btn btn-primary ms-2 mb-0 w-25" type="submit">
+                Post <i className="fas fa-paper-plane"></i>
+              </button>
+            </form>
+
+            <form class="w-100">
+              <input
+                name="title"
+                type="text"
+                className="form-control mb-2"
+                placeholder="Question Title"
+              />
+              <textarea
+                name="message"
+                class="one form-control pe-4 mb-2 bg-light"
+                id="autoheighttextarea"
+                rows="5"
+                placeholder="What's your question?"
+              ></textarea>
+              <button class="btn btn-primary mb-0 w-25" type="button">
+                Post <i className="fas fa-paper-plane"></i>
+              </button>
+            </form>
           </div>
-        </div>
-      </div>
+        </Modal.Body>
+      </Modal>
 
-      <style jsx>{`
-        .course-detail-container {
-          display: flex;
-          min-height: 100vh;
-          background-color: #f8f9fa;
-        }
-        
-        .main-content {
-          flex: 1;
-          margin-left: 260px;
-          transition: margin-left 0.3s ease;
-        }
-        
-        .main-content.collapsed {
-          margin-left: 80px;
-        }
-        
-        .card {
-          border: none;
-          border-radius: 10px;
-          overflow: hidden;
-          transition: transform 0.3s ease, box-shadow 0.3s ease;
-        }
-        
-        .card:hover {
-          transform: translateY(-5px);
-          box-shadow: 0 10px 20px rgba(0, 0, 0, 0.1);
-        }
-        
-        .list-group-item {
-          border-radius: 8px !important;
-          margin-bottom: 8px;
-          transition: all 0.2s ease;
-          border: 1px solid rgba(0, 0, 0, 0.05);
-        }
-        
-        .list-group-item:hover {
-          background-color: #f8f9fa;
-          transform: translateX(5px);
-        }
-        
-        .message-bubble {
-          background-color: #f1f3f5;
-          position: relative;
-          max-width: 80%;
-        }
-        
-        .message-bubble:after {
-          content: '';
-          position: absolute;
-          left: -10px;
-          top: 15px;
-          width: 0;
-          height: 0;
-          border: 10px solid transparent;
-          border-right-color: #f1f3f5;
-          border-left: 0;
-        }
-        
-        .discussion-messages {
-          max-height: 400px;
-          overflow-y: auto;
-          padding-right: 10px;
-        }
-        
-        /* Custom scrollbar */
-        .discussion-messages::-webkit-scrollbar {
-          width: 6px;
-        }
-        
-        .discussion-messages::-webkit-scrollbar-track {
-          background: #f1f1f1;
-          border-radius: 10px;
-        }
-        
-        .discussion-messages::-webkit-scrollbar-thumb {
-          background: #888;
-          border-radius: 10px;
-        }
-        
-        .discussion-messages::-webkit-scrollbar-thumb:hover {
-          background: #555;
-        }
-        
-        .rating-stars {
-          display: inline-block;
-        }
-        
-        @media (max-width: 992px) {
-          .main-content {
-            margin-left: 0;
-          }
-          
-          .main-content.collapsed {
-            margin-left: 0;
-          }
-        }
-      `}</style>
+      {/* Ask Question Modal */}
+      {/* Note Edit Modal */}
+      {<Modal show={addQuestionShow} size="lg" onHide={handleQuestionClose}>
+        <Modal.Header closeButton>
+          <Modal.Title>Ask Question</Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handleSaveQuestion}>
+            <div className="mb-3">
+              <label htmlFor="exampleInputEmail1" className="form-label">
+                Question Title
+              </label>
+              <input
+                value={createMessage.title}
+                name="title"
+                onChange={handleMessageChange}
+                type="text"
+                className="form-control"
+              />
+            </div>
+            <div className="mb-3">
+              <label htmlFor="exampleInputPassword1" className="form-label">
+                Question Message
+              </label>
+              <textarea
+                value={createMessage.message}
+                name="message"
+                onChange={handleMessageChange}
+                className="form-control"
+                cols="30"
+                rows="10"
+              ></textarea>
+            </div>
+            <button
+              type="button"
+              className="btn btn-secondary me-2"
+              onClick={handleQuestionClose}
+            >
+              <i className="fas fa-arrow-left"></i> Close
+            </button>
+            <button type="submit" className="btn btn-primary">
+              Send Message <i className="fas fa-check-circle"></i>
+            </button>
+          </form>
+        </Modal.Body>
+      </Modal>
+
+      }
     </>
-  );
+  )
 }
 
-export default CourseDetail;
+export default CourseDetail
