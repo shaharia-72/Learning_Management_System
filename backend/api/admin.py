@@ -201,10 +201,11 @@ class EnrolledCourseAdmin(BaseAdmin):
 # Review Admin
 @admin.register(models.Review)
 class ReviewAdmin(BaseAdmin):
-    list_display = ('course', 'user', 'rating', 'active', 'date')
+    list_display = ('id', 'course', 'user', 'rating', 'active', 'date')
     list_filter = ('rating', 'active', 'date')
     search_fields = ('course__title', 'user__username', 'review')
     list_editable = ('active',)
+
 
 # Notification Admin
 @admin.register(models.Notification)

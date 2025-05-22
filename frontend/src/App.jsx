@@ -1,5 +1,7 @@
-import { Route, Routes, BrowserRouter } from "react-router-dom"
+import React, { useState, useEffect, } from "react";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 
+import { CartContext, ProfileContext } from "./views/plugin/Context";
 import MainWrapper from "./layouts/MainWrapper"
 import PrivateRoute from "./layouts/PrivateRoute"
 
@@ -14,34 +16,73 @@ import CourseDetail from "./views/base/CourseDetail"
 import StudentDashboard from "./views/student/Dashboard"
 import StudentCourseDetail from "./views/student/CourseDetail"
 import StudentCourses from "./views/student/Courses"
+import Wishlist from "./views/student/Wishlist";
+import StudentProfile from "./views/student/Profile";
+
+// import useAxios from '../../utils/useAxios';
+import useAxios from '../../frontend/src/utils/useAxios';
+import UseData from '../src/views/plugin/UserData';
+
+import CartId from "./views/plugin/CartId";
+
+
 
 function App() {
+
+  const axiosInstance = useAxios();
+  const userData = UseData();
+  const [cartCount, setCartCount] = useState(0);
+  const [profile, setProfile] = useState([]);
+
+  useEffect(() => {
+    axiosInstance.get(`cart/course-Cart-List/${CartId()}/`).then((res) => {
+      setCartCount(res.data?.length);
+    });
+
+    axiosInstance
+      .get(`user/profile/${userData?.user_id}/`)
+      .then((res) => {
+        setProfile(res.data);
+      });
+  }, []);
+
+
   return (
-    <BrowserRouter>
-      <MainWrapper>
-        <Routes>
-          <Route>
-            <Route path="/register/" element={<Register />} />
-            <Route path="/logout/" element={<Logout />} />
-            <Route path="/login/" element={<Login />} />
-            <Route path="/forgot-password/" element={<ForgotPassword />} />
-            <Route path="/Create-New-Password/" element={<CreateNewPassword />} />
+    <CartContext.Provider value={[cartCount, setCartCount]}>
+      <ProfileContext.Provider value={profile}>
+        <BrowserRouter>
+          <MainWrapper>
+            <Routes>
+              <Route>
+                <Route path="/register/" element={<Register />} />
+                <Route path="/logout/" element={<Logout />} />
+                <Route path="/login/" element={<Login />} />
+                <Route path="/forgot-password/" element={<ForgotPassword />} />
+                <Route path="/Create-New-Password/" element={<CreateNewPassword />} />
 
 
-            {/* base route */}
-            <Route path="/" element={<Index />} />
-            <Route path="course-detail/:slug/" element={<CourseDetail />} />
+                {/* base route */}
+                <Route path="/" element={<Index />} />
+                <Route path="course-detail/:slug/" element={<CourseDetail />} />
 
 
 
-            {/* Student Routes */}
-            <Route path="/student/dashboard/" element={<StudentDashboard />} />
-            <Route path="/student/courses/" element={<StudentCourses />} />
-            <Route path="/student/course-detail/:user_id/:enrollment_id/" element={<StudentCourseDetail />} />
-          </Route>
-        </Routes>
-      </MainWrapper>
-    </BrowserRouter>
+                {/* Student Routes */}
+                <Route path="/student/dashboard/" element={<StudentDashboard />} />
+                <Route path="/student/courses/" element={<StudentCourses />} />
+                <Route path="/student/course-detail/:user_id/:enrollment_id/" element={<StudentCourseDetail />} />
+                <Route path="/student/wishlist/" element={<Wishlist />} />
+                <Route path="/student/profile/" element={<StudentProfile />} />
+                {/* <Route
+              path="/student/change-password/"
+              element={<StudentChangePassword />}
+            /> */}
+              </Route>
+            </Routes>
+          </MainWrapper>
+        </BrowserRouter>
+      </ProfileContext.Provider >
+    </CartContext.Provider>
 
   )
 }

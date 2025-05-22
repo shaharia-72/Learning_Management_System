@@ -116,6 +116,14 @@ class PasswordChangeView(generics.CreateAPIView):
 
         return Response({"message": "Invalid OTP or user not found"}, status=status.HTTP_400_BAD_REQUEST)
 
+class ProfileAPIView(generics.RetrieveUpdateAPIView):
+    serializer_class = api_serializer.ProfileSerializer
+    permission_classes = [AllowAny]
+
+    def get_object(self):
+        user_id = self.kwargs['user_id']
+        user = User.objects.get(id=user_id)
+        return Profile.objects.get(user=user)
 
 class CourseCategoryView(generics.ListAPIView):
     queryset = api_models.Category.objects.filter(active=True)
