@@ -5,10 +5,14 @@ import { Link } from 'react-router-dom';
 import useAxios from "../../utils/useAxios";
 import Rater from 'react-rater';
 import "react-rater/lib/react-rater.css";
+import axios from 'axios';
+import UserData from '../plugin/UserData';
+import Toast from "../plugin/Toast";
 
 function Index() {
   const [isLoading, setIsLoading] = useState(true);
   const [courses, setCourses] = useState([]);
+
 
   useEffect(() => {
     const fetchCourses = async () => {
@@ -57,6 +61,28 @@ function Index() {
   const goToPage = (pageNumber) => {
     setCurrentPage(Math.min(Math.max(pageNumber, 1), totalPages));
   };
+
+  const addToWishlist = async (courseId) => {
+    const formdata = new FormData();
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("course_id", courseId);
+
+    try {
+      const res = await useAxios().post(`student/wishlist/${UserData()?.user_id}/`, formdata);
+      // fetchWishlist();
+      Toast().fire({
+        icon: "success",
+        title: res.data.message,
+      });
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      Toast().fire({
+        icon: "error",
+        title: "Failed to update wishlist",
+      });
+    }
+  };
+
 
   return (
     <>
@@ -258,9 +284,9 @@ function Index() {
                                 <span className="badge bg-opacity-10 bg-danger text-dark">{c.language}</span>
                               )}
                             </div>
-                            <button className="fs-5 text-muted hover-danger border-0 bg-transparent">
+                            <a onClick={() => addToWishlist(c.id)} className="fs-5 text-muted hover-danger border-0 bg-transparent">
                               <i className="bi bi-heart"></i>
-                            </button>
+                            </a>
                           </div>
 
                           <h6 className="card-title mb-2 text-truncate">

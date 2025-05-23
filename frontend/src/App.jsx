@@ -18,8 +18,8 @@ import StudentCourseDetail from "./views/student/CourseDetail"
 import StudentCourses from "./views/student/Courses"
 import Wishlist from "./views/student/Wishlist";
 import StudentProfile from "./views/student/Profile";
+import StudentChangePassword from "./views/student/ChangePassword";
 
-// import useAxios from '../../utils/useAxios';
 import useAxios from '../../frontend/src/utils/useAxios';
 import UseData from '../src/views/plugin/UserData';
 
@@ -49,7 +49,7 @@ function App() {
 
   return (
     <CartContext.Provider value={[cartCount, setCartCount]}>
-      <ProfileContext.Provider value={profile}>
+      <ProfileContext.Provider value={[profile, setProfile]}>
         <BrowserRouter>
           <MainWrapper>
             <Routes>
@@ -73,10 +73,8 @@ function App() {
                 <Route path="/student/course-detail/:user_id/:enrollment_id/" element={<StudentCourseDetail />} />
                 <Route path="/student/wishlist/" element={<Wishlist />} />
                 <Route path="/student/profile/" element={<StudentProfile />} />
-                {/* <Route
-              path="/student/change-password/"
-              element={<StudentChangePassword />}
-            /> */}
+                <Route path="/student/change-password/" element={<StudentChangePassword />}
+                />
               </Route>
             </Routes>
           </MainWrapper>

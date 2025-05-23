@@ -169,7 +169,7 @@ function BaseHeader() {
                                     </button>
                                     <ul className="dropdown-menu dropdown-menu-end" aria-labelledby="userDropdown">
                                         <li>
-                                            <Link className="dropdown-item" to="/profile/">
+                                            <Link className="dropdown-item" to="/student/profile/">
                                                 <i className="fas fa-user me-2"></i> Profile
                                             </Link>
                                         </li>

@@ -11,7 +11,6 @@ urlpatterns = [
     re_path(r'^user/password-reset/(?P<email>[\w\.\+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+)/$', api_views.PasswordResetView.as_view()),
     path("user/password-change/", api_views.PasswordChangeView.as_view()),
     path("user/profile/<user_id>/", api_views.ProfileAPIView.as_view()),
-    path("user/change-password/", api_views.PasswordChangeView.as_view()),
 
     #core items 
     path("course/course-category/", api_views.CourseCategoryView.as_view()),

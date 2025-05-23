@@ -157,7 +157,7 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                                 </li>
                                 <li><hr className="dropdown-divider" /></li>
                                 <li>
-                                    <Link className="dropdown-item" to="/profile">
+                                    <Link className="dropdown-item" to="/student/profile">
                                         <i className="fas fa-user me-2"></i> Profile
                                     </Link>
                                 </li>
