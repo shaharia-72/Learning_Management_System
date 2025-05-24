@@ -25,7 +25,9 @@ import UseData from '../src/views/plugin/UserData';
 
 import CartId from "./views/plugin/CartId";
 
-
+import Dashboard from "./views/instructor/Dashboard";
+import Courses from "./views/instructor/Courses";
+import Review from "./views/instructor/Review";
 
 function App() {
 
@@ -73,8 +75,13 @@ function App() {
                 <Route path="/student/course-detail/:user_id/:enrollment_id/" element={<StudentCourseDetail />} />
                 <Route path="/student/wishlist/" element={<Wishlist />} />
                 <Route path="/student/profile/" element={<StudentProfile />} />
-                <Route path="/student/change-password/" element={<StudentChangePassword />}
-                />
+                <Route path="/student/change-password/" element={<StudentChangePassword />} />
+
+                {/* Teacher Routes */}
+
+                <Route path="/instructor/dashboard/" element={<Dashboard />} />
+                <Route path="/instructor/courses/" element={<Courses />} />
+                <Route path="/instructor/reviews/" element={<Review />} />
               </Route>
             </Routes>
           </MainWrapper>

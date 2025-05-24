@@ -925,7 +925,7 @@ from datetime import datetime, timedelta
 from django.db.models import Sum
 from django.db.models.functions import ExtractMonth
 from django.core.files.uploadedfile import InMemoryUploadedFile
-
+from rest_framework.decorators import api_view
 # teacher sections 
 
 
@@ -937,7 +937,7 @@ def strtobool(val: str) -> bool:
         return False
     raise ValueError(f"Invalid truth value: {val}")
 
-class TeacherSummaryAPIView(generics.ListAPIView):
+class TeacherSummaryView(generics.ListAPIView):
     serializer_class = api_serializer.TeacherSummarySerializer
     permission_classes = [AllowAny]
 
@@ -980,7 +980,7 @@ class TeacherSummaryAPIView(generics.ListAPIView):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
-class TeacherCourseListAPIView(generics.ListAPIView):
+class TeacherCourseListView(generics.ListAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
 
@@ -989,7 +989,7 @@ class TeacherCourseListAPIView(generics.ListAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Course.objects.filter(teacher=teacher)
 
-class TeacherReviewListAPIView(generics.ListAPIView):
+class TeacherReviewListView(generics.ListAPIView):
     serializer_class = api_serializer.ReviewSerializer
     permission_classes = [AllowAny]
 
@@ -998,7 +998,7 @@ class TeacherReviewListAPIView(generics.ListAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Review.objects.filter(course__teacher=teacher)
 
-class TeacherReviewDetailAPIView(generics.RetrieveUpdateAPIView):
+class TeacherReviewDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = api_serializer.ReviewSerializer
     permission_classes = [AllowAny]
 
@@ -1008,7 +1008,7 @@ class TeacherReviewDetailAPIView(generics.RetrieveUpdateAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Review.objects.get(course__teacher=teacher, id=review_id)
 
-class TeacherStudentsListAPIVIew(viewsets.ViewSet):
+class TeacherStudentsListVIew(viewsets.ViewSet):
     
     def list(self, request, teacher_id=None):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
@@ -1033,7 +1033,7 @@ class TeacherStudentsListAPIVIew(viewsets.ViewSet):
         return Response(students)
 
 @api_view(("GET", ))
-def TeacherAllMonthEarningAPIView(request, teacher_id):
+def TeacherAllMonthEarningView(request, teacher_id):
     teacher = api_models.Teacher.objects.get(id=teacher_id)
     monthly_earning_tracker = (
         api_models.CartOrderItem.objects
@@ -1043,14 +1043,14 @@ def TeacherAllMonthEarningAPIView(request, teacher_id):
         )
         .values("month")
         .annotate(
-            total_earning=models.Sum("price")
+            total_earning=Sum("price")
         )
         .order_by("month")
     )
 
     return Response(monthly_earning_tracker)
 
-class TeacherBestSellingCourseAPIView(viewsets.ViewSet):
+class TeacherBestSellingCourseView(viewsets.ViewSet):
 
     def list(self, request, teacher_id=None):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
@@ -1058,7 +1058,7 @@ class TeacherBestSellingCourseAPIView(viewsets.ViewSet):
         courses = api_models.Course.objects.filter(teacher=teacher)
 
         for course in courses:
-            revenue = course.enrolledcourse_set.aggregate(total_price=models.Sum('order_item__price'))['total_price'] or 0
+            revenue = course.enrolledcourse_set.aggregate(total_price=Sum('order_item__price'))['total_price'] or 0
             sales = course.enrolledcourse_set.count()
 
             courses_with_total_price.append({
@@ -1070,7 +1070,7 @@ class TeacherBestSellingCourseAPIView(viewsets.ViewSet):
 
         return Response(courses_with_total_price)
     
-class TeacherCourseOrdersListAPIView(generics.ListAPIView):
+class TeacherCourseOrdersListView(generics.ListAPIView):
     serializer_class = api_serializer.CartOrderItemSerializer
     permission_classes = [AllowAny]
 
@@ -1080,7 +1080,7 @@ class TeacherCourseOrdersListAPIView(generics.ListAPIView):
 
         return api_models.CartOrderItem.objects.filter(teacher=teacher)
 
-class TeacherQuestionAnswerListAPIView(generics.ListAPIView):
+class TeacherQuestionAnswerListView(generics.ListAPIView):
     serializer_class = api_serializer.Question_AnswerSerializer
     permission_classes = [AllowAny]
 
@@ -1089,7 +1089,7 @@ class TeacherQuestionAnswerListAPIView(generics.ListAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Question_Answer.objects.filter(course__teacher=teacher)
     
-class TeacherCouponListCreateAPIView(generics.ListCreateAPIView):
+class TeacherCouponListCreateView(generics.ListCreateAPIView):
     serializer_class = api_serializer.CouponSerializer
     permission_classes = [AllowAny]
     
@@ -1098,7 +1098,7 @@ class TeacherCouponListCreateAPIView(generics.ListCreateAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Coupon.objects.filter(teacher=teacher)
     
-class TeacherCouponDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
+class TeacherCouponDetailView(generics.RetrieveUpdateDestroyAPIView):
     serializer_class = api_serializer.CouponSerializer
     permission_classes = [AllowAny]
     
@@ -1108,7 +1108,7 @@ class TeacherCouponDetailAPIView(generics.RetrieveUpdateDestroyAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Coupon.objects.get(teacher=teacher, id=coupon_id)
     
-class TeacherNotificationListAPIView(generics.ListAPIView):
+class TeacherNotificationListView(generics.ListAPIView):
     serializer_class = api_serializer.NotificationSerializer
     permission_classes = [AllowAny]
 
@@ -1117,7 +1117,7 @@ class TeacherNotificationListAPIView(generics.ListAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Notification.objects.filter(teacher=teacher, seen=False)
     
-class TeacherNotificationDetailAPIView(generics.RetrieveUpdateAPIView):
+class TeacherNotificationDetailView(generics.RetrieveUpdateAPIView):
     serializer_class = api_serializer.NotificationSerializer
     permission_classes = [AllowAny]
 
@@ -1127,7 +1127,7 @@ class TeacherNotificationDetailAPIView(generics.RetrieveUpdateAPIView):
         teacher = api_models.Teacher.objects.get(id=teacher_id)
         return api_models.Notification.objects.get(teacher=teacher, id=noti_id)
     
-class CourseCreateAPIView(generics.CreateAPIView):
+class CourseCreateView(generics.CreateAPIView):
     querysect = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
     permisscion_classes = [AllowAny]
@@ -1137,6 +1137,7 @@ class CourseCreateAPIView(generics.CreateAPIView):
         course_instance = serializer.save()
 
         variant_data = []
+        
         for key, value in self.request.data.items():
             if key.startswith('variant') and '[variant_title]' in key:
                 index = key.split('[')[1].split(']')[0]
@@ -1181,7 +1182,7 @@ class CourseCreateAPIView(generics.CreateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(course=course_instance) 
 
-class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
+class CourseUpdateView(generics.RetrieveUpdateAPIView):
     querysect = api_models.Course.objects.all()
     serializer_class = api_serializer.CourseSerializer
     permisscion_classes = [AllowAny]
@@ -1317,7 +1318,7 @@ class CourseUpdateAPIView(generics.RetrieveUpdateAPIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(course=course_instance) 
 
-class CourseDetailAPIView(generics.RetrieveDestroyAPIView):
+class CourseDetailView(generics.RetrieveDestroyAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
 
@@ -1325,7 +1326,7 @@ class CourseDetailAPIView(generics.RetrieveDestroyAPIView):
         course_id = self.kwargs['course_id']
         return api_models.Course.objects.get(course_id=course_id)
 
-class CourseVariantDeleteAPIView(generics.DestroyAPIView):
+class CourseVariantDeleteView(generics.DestroyAPIView):
     serializer_class = api_serializer.VariantSerializer
     permission_classes = [AllowAny]
 
@@ -1340,7 +1341,7 @@ class CourseVariantDeleteAPIView(generics.DestroyAPIView):
         course = api_models.Course.objects.get(teacher=teacher, course_id=course_id)
         return api_models.Variant.objects.get(id=variant_id)
     
-class CourseVariantItemDeleteAPIVIew(generics.DestroyAPIView):
+class CourseVariantItemDeleteVIew(generics.DestroyAPIView):
     serializer_class = api_serializer.VariantItemSerializer
     permission_classes = [AllowAny]
 

@@ -39,6 +39,26 @@ urlpatterns = [
     path("student/wishlist/<user_id>/", api_views.StudentWishListListCreateView.as_view()),
     path("student/question-answer-list-create/<course_id>/", api_views.QuestionAnswerListCreateView.as_view()),
     path("student/question-answer-message-create/", api_views.QuestionAnswerMessageSendView.as_view()),
+    
+    # Teacher Routes
+    path("teacher/summary/<teacher_id>/", api_views.TeacherSummaryView.as_view()),
+    path("teacher/course-lists/<teacher_id>/", api_views.TeacherCourseListView.as_view()),
+    path("teacher/review-lists/<teacher_id>/", api_views.TeacherReviewListView.as_view()),
+    path("teacher/review-detail/<teacher_id>/<review_id>/", api_views.TeacherReviewDetailView.as_view()),
+    path("teacher/student-lists/<teacher_id>/", api_views.TeacherStudentsListVIew.as_view({'get': 'list'})),
+    path("teacher/all-months-earning/<teacher_id>/", api_views.TeacherAllMonthEarningView),
+    path("teacher/best-course-earning/<teacher_id>/", api_views.TeacherBestSellingCourseView.as_view({'get': 'list'})),
+    path("teacher/course-order-list/<teacher_id>/", api_views.TeacherCourseOrdersListView.as_view()),
+    path("teacher/question-answer-list/<teacher_id>/", api_views.TeacherQuestionAnswerListView.as_view()),
+    path("teacher/coupon-list/<teacher_id>/", api_views.TeacherCouponListCreateView.as_view()),
+    path("teacher/coupon-detail/<teacher_id>/<coupon_id>/", api_views.TeacherCouponDetailView.as_view()),
+    path("teacher/notice-list/<teacher_id>/", api_views.TeacherNotificationListView.as_view()),
+    path("teacher/notice-detail/<teacher_id>/<noti_id>", api_views.TeacherNotificationDetailView.as_view()),
+    path("teacher/course-create/", api_views.CourseCreateView.as_view()),
+    path("teacher/course-update/<teacher_id>/<course_id>/", api_views.CourseUpdateView.as_view()),
+    path("teacher/course-detail/<course_id>/", api_views.CourseDetailView.as_view()),
+    path("teacher/course/variant-delete/<variant_id>/<teacher_id>/<course_id>/", api_views.CourseVariantDeleteView.as_view()),
+    path("teacher/course/variant-item-delete/<variant_id>/<variant_item_id>/<teacher_id>/<course_id>/", api_views.CourseVariantItemDeleteVIew.as_view()),
 
 ]
 
