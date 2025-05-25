@@ -28,6 +28,7 @@ import CartId from "./views/plugin/CartId";
 import Dashboard from "./views/instructor/Dashboard";
 import Courses from "./views/instructor/Courses";
 import Review from "./views/instructor/Review";
+import Students from "./views/instructor/Students";
 
 function App() {
 
@@ -82,6 +83,7 @@ function App() {
                 <Route path="/instructor/dashboard/" element={<Dashboard />} />
                 <Route path="/instructor/courses/" element={<Courses />} />
                 <Route path="/instructor/reviews/" element={<Review />} />
+                <Route path="/instructor/students/" element={<Students />} />
               </Route>
             </Routes>
           </MainWrapper>

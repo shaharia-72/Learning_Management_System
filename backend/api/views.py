@@ -277,13 +277,13 @@ class CreateOrderView(generics.CreateAPIView):
     
     def create(self, request, *args, **kwargs):
         data = request.data
-        required_fields = ['full_name', 'email', 'country', 'cart_id', 'user_id'] 
+        required_fields = ['first_name', 'email', 'country', 'cart_id', 'user_id'] 
         
         for field in required_fields:
             if field not in data:
                 raise ValidationError(f"{field} is required.")
         
-        full_name = data.get('full_name')
+        first_name = data.get('first_name')
         email = data.get('email')
         country = data.get('country')
         cart_id = data.get('cart_id')
@@ -296,7 +296,7 @@ class CreateOrderView(generics.CreateAPIView):
             raise ValidationError("No cart items found.")
         
         order = api_models.CartOrder.objects.create(
-            full_name = full_name,
+            first_name = first_name,
             email = email,
             country = country,
             student = user,
@@ -442,7 +442,7 @@ class StripeCheckOutView(generics.CreateAPIView):
                     'price_data': {
                         'currency': 'BDT',
                         'product_data': {
-                            'name': order.full_name,
+                            'name': order.first_name,
                         },
                         'unit_amount': int(order.total * 100),
                     },
@@ -1021,9 +1021,7 @@ class TeacherStudentsListVIew(viewsets.ViewSet):
             if course.user_id not in unique_student_ids:
                 user = User.objects.get(id=course.user_id)
                 student = {
-                    "full_name": user.profile.full_name,
-                    "image": user.profile.image.url,
-                    "country": user.profile.country,
+                    "first_name": user.profile.first_name,
                     "date": course.date
                 }
 

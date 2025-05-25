@@ -20,21 +20,21 @@ class BaseAdmin(admin.ModelAdmin):
 class TeacherAdmin(BaseAdmin):
     list_display = ('full_name', 'user', 'country', 'courses_count', 'students_count')
     search_fields = ('full_name', 'user__username', 'country')
-    readonly_fields = ('full_name',)
+    readonly_fields = ('full_name', 'teacher_id', 'id')
+
     fieldsets = (
         ('Personal Info', {
-            'fields': ('user', 'full_name', 'image', 'country')
+            'fields': ('user', 'full_name', 'image', 'country', 'teacher_id', 'id')  # <-- You can keep them here
         }),
         ('Bio & About', {
-            'fields': (
-                'bio', 'about')
+            'fields': ('bio', 'about')
         }),
         ('Social Media', {
             'fields': ('personal_website', 'facebook', 'twitter', 
                       'instagram', 'linkedIn', 'telegram', 'youtube'),
-            # 'classes': ('collapse',)
         }),
     )
+
 
     def courses_count(self, obj):
         return obj.courses().count()

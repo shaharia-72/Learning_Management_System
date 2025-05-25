@@ -11,6 +11,10 @@ class MyTokenObtainPairSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token['username'] = user.username
         token['email'] = user.email
+        try:
+            token['teacher_id'] = user.teacher.id
+        except:
+            token['teacher_id'] = 0
         return token
 
 class UserSerializer(serializers.ModelSerializer):
