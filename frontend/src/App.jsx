@@ -38,6 +38,11 @@ import Profile from "./views/instructor/Profile";
 import CourseCreate from "./views/instructor/CourseCreate";
 import CourseEdit from "./views/instructor/CourseEdit";
 
+import Cart from "./views/base/Cart";
+import Checkout from "./views/base/Checkout";
+import Success from "./views/base/Success";
+import Search from "./views/base/Search";
+
 function App() {
 
   const axiosInstance = useAxios();
@@ -75,6 +80,11 @@ function App() {
                 {/* base route */}
                 <Route path="/" element={<Index />} />
                 <Route path="course-detail/:slug/" element={<CourseDetail />} />
+                <Route path="/cart/" element={<Cart />} />
+                <Route path="/checkout/:order_oid/" element={<Checkout />} />
+                <Route path="/payment-success/:order_oid/" element={<Success />} />
+                <Route path="/search/" element={<Search />} />
+
 
 
 

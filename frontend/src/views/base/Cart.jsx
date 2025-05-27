@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useContext } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
@@ -18,19 +19,27 @@ function Cart() {
     email: "",
     country: "",
   });
-  const fetchCartItem = async () => {
-    try {
-      await apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
-        console.log(res.data);
-        setCart(res.data);
-      });
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-      await apiInstance.get(`cart/stats/${CartId()}/`).then((res) => {
-        console.log(res.data);
-        setCartStats(res.data);
-      });
+  const fetchCartItem = async () => {
+    setIsLoading(true);
+    try {
+      const [cartResponse, statsResponse] = await Promise.all([
+        apiInstance.get(`course/cart-list/${CartId()}/`),
+        apiInstance.get(`cart/stats/${CartId()}/`)
+      ]);
+
+      setCart(cartResponse.data);
+      setCartStats(statsResponse.data);
     } catch (error) {
       console.log(error);
+      Toast().fire({
+        icon: "error",
+        title: "Failed to load cart items",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -38,23 +47,33 @@ function Cart() {
     fetchCartItem();
   }, []);
 
-  const navigate = useNavigate()
+  const navigate = useNavigate();
 
   const cartItemDelete = async (itemId) => {
-    await apiInstance
-      .delete(`course/cart-item-delete/${CartId()}/${itemId}/`)
-      .then((res) => {
-        console.log(res.data);
-        fetchCartItem();
-        Toast().fire({
-          icon: "success",
-          title: "Cart Item Deleted",
-        });
-        // Set cart count after adding to cart
-        apiInstance.get(`course/cart-list/${CartId()}/`).then((res) => {
-          setCartCount(res.data?.length);
-        });
+    try {
+      await apiInstance.delete(`course/cart-item-delete/${CartId()}/${itemId}/`);
+
+      Toast().fire({
+        icon: "success",
+        title: "Item removed from cart",
       });
+
+      // Fetch updated cart
+      const [cartResponse, statsResponse] = await Promise.all([
+        apiInstance.get(`course/cart-list/${CartId()}/`),
+        apiInstance.get(`cart/stats/${CartId()}/`)
+      ]);
+
+      setCart(cartResponse.data);
+      setCartStats(statsResponse.data);
+      setCartCount(cartResponse.data?.length);
+    } catch (error) {
+      console.log(error);
+      Toast().fire({
+        icon: "error",
+        title: "Failed to remove item",
+      });
+    }
   };
 
   const handleBioDataChange = (event) => {
@@ -65,212 +84,342 @@ function Cart() {
   };
 
   const createOrder = async (e) => {
-    e.preventDefault()
-    const formdata = new FormData()
-    formdata.append("full_name", bioData.full_name);
-    formdata.append("email", bioData.email);
-    formdata.append("country", bioData.country);
-    formdata.append("cart_id", CartId());
-    formdata.append("user_id", userId);
+    e.preventDefault();
+
+    // Basic validation
+    if (!bioData.full_name || !bioData.email || !bioData.country) {
+      Toast().fire({
+        icon: "error",
+        title: "Please fill all required fields",
+      });
+      return;
+    }
+
+    if (cart.length === 0) {
+      Toast().fire({
+        icon: "error",
+        title: "Your cart is empty",
+      });
+      return;
+    }
+
+    setIsSubmitting(true);
 
     try {
-      await apiInstance.post(`order/create-order/`, formdata).then((res) => {
-        console.log(res.data);
-        navigate(`/checkout/${res.data.order_oid}/`);
-      });
+      const formdata = new FormData();
+      formdata.append("full_name", bioData.full_name);
+      formdata.append("email", bioData.email);
+      formdata.append("country", bioData.country);
+      formdata.append("cart_id", CartId());
+      formdata.append("user_id", userId);
+
+      const response = await apiInstance.post(`order/create-order/`, formdata);
+      navigate(`/checkout/${response.data.order_oid}/`);
     } catch (error) {
       console.log(error);
+      Toast().fire({
+        icon: "error",
+        title: "Failed to create order",
+      });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  // Animation variants
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0 },
+    exit: { opacity: 0, x: -50 }
   };
 
   return (
     <>
       <BaseHeader />
 
-      <section className="py-0">
+      <section className="py-4 bg-gradient-primary text-white">
         <div className="container">
           <div className="row">
             <div className="col-12">
-              <div className="bg-light p-4 text-center rounded-3">
-                <h1 className="m-0">My cart</h1>
-                {/* Breadcrumb */}
-                <div className="d-flex justify-content-center">
-                  <nav aria-label="breadcrumb">
-                    <ol className="breadcrumb breadcrumb-dots mb-0">
-                      <li className="breadcrumb-item">
-                        <a href="#" className="text-decoration-none text-dark">
-                          Home
-                        </a>
-                      </li>
-                      <li className="breadcrumb-item">
-                        <a href="#" className="text-decoration-none text-dark">
-                          Courses
-                        </a>
-                      </li>
-                      <li
-                        className="breadcrumb-item active"
-                        aria-current="page"
-                      >
-                        Cart
-                      </li>
-                    </ol>
-                  </nav>
-                </div>
+              <div className="p-4 text-center rounded-3">
+                <h1 className="m-0 fw-bold">Your Shopping Cart</h1>
+                <nav aria-label="breadcrumb" className="d-flex justify-content-center">
+                  <ol className="breadcrumb breadcrumb-dots mb-0">
+                    <li className="breadcrumb-item">
+                      <Link to="/" className="text-white-50 text-decoration-none">
+                        Home
+                      </Link>
+                    </li>
+                    <li className="breadcrumb-item">
+                      <Link to="/courses" className="text-white-50 text-decoration-none">
+                        Courses
+                      </Link>
+                    </li>
+                    <li className="breadcrumb-item active text-white" aria-current="page">
+                      Cart
+                    </li>
+                  </ol>
+                </nav>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      <section className="pt-5">
+      <section className="py-5">
         <div className="container">
           <form onSubmit={createOrder}>
-            <div className="row g-4 g-sm-5">
+            <div className="row g-4">
               {/* Main content START */}
               <div className="col-lg-8 mb-4 mb-sm-0">
-                <div className="p-4 shadow rounded-3">
-                  <h5 className="mb-0 mb-3">Cart Items ({cart?.length})</h5>
+                {/* Cart Items */}
+                <div className="card shadow-sm border-0 rounded-3 overflow-hidden">
+                  <div className="card-header bg-white border-bottom">
+                    <h5 className="mb-0 fw-bold d-flex align-items-center">
+                      <i className="fas fa-shopping-cart me-2"></i>
+                      Your Cart ({cart?.length} {cart?.length === 1 ? 'Item' : 'Items'})
+                    </h5>
+                  </div>
 
-                  <div className="table-responsive border-0 rounded-3">
-                    <table className="table align-middle p-4 mb-0">
-                      <tbody className="border-top-2">
-                        {cart?.map((c, index) => (
-                          <tr>
-                            <td>
-                              <div className="d-lg-flex align-items-center">
-                                <div className="w-100px w-md-80px mb-2 mb-md-0">
-                                  <img
-                                    src={c.course.image}
-                                    style={{
-                                      width: "100px",
-                                      height: "70px",
-                                      objectFit: "cover",
-                                    }}
-                                    className="rounded"
-                                    alt=""
-                                  />
-                                </div>
-                                <h6 className="mb-0 ms-lg-3 mt-2 mt-lg-0">
-                                  <a
-                                    href="#"
-                                    className="text-decoration-none text-dark"
-                                  >
-                                    {c.course.title}
-                                  </a>
-                                </h6>
-                              </div>
-                            </td>
-                            <td className="text-center">
-                              <h5 className="text-success mb-0">${c.price}</h5>
-                            </td>
-                            <td>
-                              <button
-                                onClick={() => cartItemDelete(c.id)}
-                                className="btn btn-sm btn-danger px-2 mb-0"
-                                type="button"
-                              >
-                                <i className="fas fa-fw fa-times" />
-                              </button>
-                            </td>
-                          </tr>
-                        ))}
-
-                        {cart?.length < 1 && (
-                          <p className="mt-1 p-1">No Item In Cart</p>
-                        )}
-                      </tbody>
-                    </table>
+                  <div className="card-body p-0">
+                    {isLoading ? (
+                      <div className="p-4 text-center">
+                        <div className="spinner-border text-primary" role="status">
+                          <span className="visually-hidden">Loading...</span>
+                        </div>
+                        <p className="mt-2">Loading your cart...</p>
+                      </div>
+                    ) : cart?.length > 0 ? (
+                      <div className="table-responsive">
+                        <table className="table align-middle mb-0">
+                          <thead className="bg-light">
+                            <tr>
+                              <th scope="col" className="border-0">Course</th>
+                              <th scope="col" className="border-0 text-center">Price</th>
+                              <th scope="col" className="border-0"></th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            <AnimatePresence>
+                              {cart?.map((c, index) => (
+                                <motion.tr
+                                  key={c.id}
+                                  variants={itemVariants}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  transition={{ duration: 0.3 }}
+                                >
+                                  <td>
+                                    <div className="d-flex align-items-center">
+                                      <div className="flex-shrink-0 me-3">
+                                        <img
+                                          src={c.course.image}
+                                          style={{
+                                            width: "80px",
+                                            height: "60px",
+                                            objectFit: "cover",
+                                          }}
+                                          className="rounded shadow-sm"
+                                          alt={c.course.title}
+                                        />
+                                      </div>
+                                      <div className="flex-grow-1">
+                                        <h6 className="mb-0">
+                                          <Link to={`/course/${c.course.slug}/`} className="text-decoration-none text-dark">
+                                            {c.course.title}
+                                          </Link>
+                                        </h6>
+                                        <small className="text-muted">By {c.course.instructor.full_name}</small>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="text-center">
+                                    <h5 className="text-success mb-0">${c.price.toFixed(2)}</h5>
+                                  </td>
+                                  <td className="text-end">
+                                    <motion.button
+                                      whileHover={{ scale: 1.1 }}
+                                      whileTap={{ scale: 0.9 }}
+                                      onClick={() => cartItemDelete(c.id)}
+                                      className="btn btn-sm btn-outline-danger px-2 mb-0"
+                                      type="button"
+                                      aria-label="Remove item"
+                                    >
+                                      <i className="fas fa-trash-alt" />
+                                    </motion.button>
+                                  </td>
+                                </motion.tr>
+                              ))}
+                            </AnimatePresence>
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <div className="p-4 text-center">
+                        <div className="mb-3">
+                          <i className="fas fa-shopping-cart fa-3x text-muted"></i>
+                        </div>
+                        <h5 className="text-muted">Your cart is empty</h5>
+                        <p className="text-muted">Browse our courses and find something to learn!</p>
+                        <Link to="/courses" className="btn btn-primary mt-3">
+                          Explore Courses
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
 
-                {/* Personal info START */}
-                <div className="shadow p-4 rounded-3 mt-5">
-                  {/* Title */}
-                  <h5 className="mb-0">Personal Details</h5>
-                  {/* Form START */}
-                  <div className="row g-3 mt-0">
-                    {/* Name */}
-                    <div className="col-md-12 bg-light-input">
-                      <label htmlFor="yourName" className="form-label">
-                        Your name *
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        id="yourName"
-                        placeholder="Name"
-                        name="full_name"
-                        value={bioData.full_name}
-                        onChange={handleBioDataChange}
-                      />
-                    </div>
-                    {/* Email */}
-                    <div className="col-md-12 bg-light-input">
-                      <label htmlFor="emailInput" className="form-label">
-                        Email address *
-                      </label>
-                      <input
-                        type="email"
-                        className="form-control"
-                        id="emailInput"
-                        placeholder="Email"
-                        name="email"
-                        value={bioData.email}
-                        onChange={handleBioDataChange}
-                      />
-                    </div>
+                {/* Personal info */}
+                <div className="card shadow-sm border-0 rounded-3 mt-4">
+                  <div className="card-header bg-white border-bottom">
+                    <h5 className="mb-0 fw-bold d-flex align-items-center">
+                      <i className="fas fa-user-circle me-2"></i>
+                      Personal Details
+                    </h5>
+                  </div>
+                  <div className="card-body">
+                    <div className="row g-3">
+                      {/* Name */}
+                      <div className="col-md-12">
+                        <label htmlFor="yourName" className="form-label fw-bold">
+                          Full Name <span className="text-danger">*</span>
+                        </label>
+                        <div className="input-group">
+                          <span className="input-group-text bg-light">
+                            <i className="fas fa-user"></i>
+                          </span>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="yourName"
+                            placeholder="Your full name"
+                            name="full_name"
+                            value={bioData.full_name}
+                            onChange={handleBioDataChange}
+                            required
+                          />
+                        </div>
+                      </div>
 
-                    {/* Country option */}
-                    <div className="col-md-12 bg-light-input">
-                      <label htmlFor="mobileNumber" className="form-label">
-                        Enter country *
-                      </label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        id="mobileNumber"
-                        placeholder="Country"
-                        name="country"
-                        value={bioData.country}
-                        onChange={handleBioDataChange}
-                      />
+                      {/* Email */}
+                      <div className="col-md-12">
+                        <label htmlFor="emailInput" className="form-label fw-bold">
+                          Email Address <span className="text-danger">*</span>
+                        </label>
+                        <div className="input-group">
+                          <span className="input-group-text bg-light">
+                            <i className="fas fa-envelope"></i>
+                          </span>
+                          <input
+                            type="email"
+                            className="form-control"
+                            id="emailInput"
+                            placeholder="your@email.com"
+                            name="email"
+                            value={bioData.email}
+                            onChange={handleBioDataChange}
+                            required
+                          />
+                        </div>
+                      </div>
+
+                      {/* Country */}
+                      <div className="col-md-12">
+                        <label htmlFor="countryInput" className="form-label fw-bold">
+                          Country <span className="text-danger">*</span>
+                        </label>
+                        <div className="input-group">
+                          <span className="input-group-text bg-light">
+                            <i className="fas fa-globe"></i>
+                          </span>
+                          <input
+                            type="text"
+                            className="form-control"
+                            id="countryInput"
+                            placeholder="Your country"
+                            name="country"
+                            value={bioData.country}
+                            onChange={handleBioDataChange}
+                            required
+                          />
+                        </div>
+                      </div>
                     </div>
                   </div>
-                  {/* Form END */}
                 </div>
               </div>
 
+              {/* Order Summary */}
               <div className="col-lg-4">
-                <div className="p-4 shadow rounded-3">
-                  <h4 className="mb-3">Cart Total</h4>
-                  <ul class="list-group mb-3">
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                      Sub Total
-                      <span>${cartStats.price?.toFixed(2)}</span>
-                    </li>
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                      Tax
-                      <span>${cartStats.tax?.toFixed(2)}</span>
-                    </li>
-                    <li class="list-group-item d-flex fw-bold justify-content-between align-items-center">
-                      Total
-                      <span className="fw-bold">
-                        ${cartStats.total?.toFixed(2)}
-                      </span>
-                    </li>
-                  </ul>
-                  <div className="d-grid">
-                    <button type="submit" className="btn btn-lg btn-success">
-                      Proceed to Checkout
-                    </button>
+                <div className="card shadow-sm border-0 rounded-3 sticky-top" style={{ top: "20px" }}>
+                  <div className="card-header bg-white border-bottom">
+                    <h5 className="mb-0 fw-bold d-flex align-items-center">
+                      <i className="fas fa-receipt me-2"></i>
+                      Order Summary
+                    </h5>
                   </div>
-                  <p className="small mb-0 mt-2 text-center">
-                    By proceeding to checkout, you agree to these{" "}
-                    <a href="#">
-                      {" "}
-                      <strong>Terms of Service</strong>
-                    </a>
-                  </p>
+                  <div className="card-body">
+                    <ul className="list-group list-group-flush mb-3">
+                      <li className="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                        <span>Subtotal</span>
+                        <span className="fw-medium">${cartStats.price?.toFixed(2) || '0.00'}</span>
+                      </li>
+                      <li className="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                        <span>Tax</span>
+                        <span className="fw-medium">${cartStats.tax?.toFixed(2) || '0.00'}</span>
+                      </li>
+                      <li className="list-group-item d-flex justify-content-between align-items-center bg-transparent px-0 py-2">
+                        <span className="fw-bold">Total</span>
+                        <span className="fw-bold text-success">${cartStats.total?.toFixed(2) || '0.00'}</span>
+                      </li>
+                    </ul>
+
+                    <div className="d-grid">
+                      <motion.button
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        type="submit"
+                        className="btn btn-primary btn-lg"
+                        disabled={isSubmitting || cart?.length === 0}
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <i className="fas fa-lock me-2"></i>
+                            Proceed to Checkout
+                          </>
+                        )}
+                      </motion.button>
+                    </div>
+
+                    <div className="mt-3 text-center">
+                      <small className="text-muted">
+                        By proceeding, you agree to our{" "}
+                        <Link to="/terms" className="text-decoration-none">
+                          Terms of Service
+                        </Link>{" "}
+                        and{" "}
+                        <Link to="/privacy" className="text-decoration-none">
+                          Privacy Policy
+                        </Link>
+                      </small>
+                    </div>
+
+                    <div className="mt-4">
+                      <h6 className="text-uppercase text-muted mb-3 fw-bold">Secure Payment</h6>
+                      <div className="d-flex justify-content-between">
+                        <img src="https://via.placeholder.com/40x25?text=VISA" alt="Visa" className="img-fluid" />
+                        <img src="https://via.placeholder.com/40x25?text=MC" alt="Mastercard" className="img-fluid" />
+                        <img src="https://via.placeholder.com/40x25?text=AMEX" alt="Amex" className="img-fluid" />
+                        <img src="https://via.placeholder.com/40x25?text=PP" alt="PayPal" className="img-fluid" />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

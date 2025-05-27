@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import useAxios from '../../utils/useAxios';
 import UseData from '../plugin/UserData';
 
-const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
+const TBaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
     const location = useLocation();
 
     const axiosInstance = useAxios();
@@ -53,78 +53,13 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                         >
                             <i className="fas fa-bars"></i>
                         </button>
-                        <Link className="navbar-brand d-flex align-items-center" to="/dashboard">
+                        <Link className="navbar-brand d-flex align-items-center" to="/instructor/dashboard/">
                             <i className="fas fa-graduation-cap me-2 text-primary"></i>
                             <span className="fw-bold text-gradient">EduPortal</span>
                         </Link>
                     </div>
 
                     <div className="d-flex align-items-center">
-                        {/* Search Bar */}
-                        {/* <div className="d-none d-lg-block me-3">
-                            <div className="input-group input-group-sm">
-                                <input
-                                    type="text"
-                                    className="form-control bg-dark text-white border-secondary"
-                                    placeholder="Search..."
-                                    aria-label="Search"
-                                />
-                                <button className="btn btn-outline-secondary" type="button">
-                                    <i className="fas fa-search"></i>
-                                </button>
-                            </div>
-                        </div> */}
-
-                        {/* Notification Bell */}
-                        {/* <div className="dropdown me-3">
-                            <a
-                                className="btn btn-dark position-relative"
-                                href="#"
-                                role="button"
-                                id="dropdownNotifications"
-                                data-bs-toggle="dropdown"
-                                aria-expanded="false"
-                            >
-                                <i className="fas fa-bell"></i>
-                                <span className="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                    5
-                                    <span className="visually-hidden">unread notifications</span>
-                                </span>
-                            </a>
-                            <ul className="dropdown-menu dropdown-menu-end dropdown-menu-dark" aria-labelledby="dropdownNotifications">
-                                <li><h6 className="dropdown-header">Notifications</h6></li>
-                                <li>
-                                    <a className="dropdown-item d-flex align-items-center" href="#">
-                                        <div className="me-3">
-                                            <div className="bg-primary bg-opacity-10 p-2 rounded">
-                                                <i className="fas fa-book text-primary"></i>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="small text-muted">Today, 10:30 AM</div>
-                                            <span className="fw-bold">New assignment posted</span>
-                                        </div>
-                                    </a>
-                                </li>
-                                <li>
-                                    <a className="dropdown-item d-flex align-items-center" href="#">
-                                        <div className="me-3">
-                                            <div className="bg-success bg-opacity-10 p-2 rounded">
-                                                <i className="fas fa-check-circle text-success"></i>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <div className="small text-muted">Yesterday, 4:15 PM</div>
-                                            <span className="fw-bold">Assignment graded</span>
-                                        </div>
-                                    </a>
-                                </li>
-                                <li><hr className="dropdown-divider" /></li>
-                                <li><a className="dropdown-item text-center text-primary" href="#">View all notifications</a></li>
-                            </ul>
-                        </div> */}
-
-                        {/* User Dropdown */}
                         <div className="dropdown">
                             <a
                                 className="btn btn-dark dropdown-toggle d-flex align-items-center"
@@ -136,7 +71,7 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                             >
                                 <div className="me-2">
                                     <div className="avatar avatar-sm rounded-circle bg-primary d-flex align-items-center justify-content-center">
-                                        <span className="text-white">{userData?.username.substring(0, 2)}</span>
+                                        <span className="text-white">{userData?.username?.substring(0, 2)}</span>
                                     </div>
                                 </div>
                                 <span className="d-none d-lg-inline">{userData?.username}</span>
@@ -146,18 +81,17 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                                     <div className="dropdown-header d-flex align-items-center">
                                         <div className="me-3">
                                             <div className="avatar avatar-md rounded-circle bg-primary d-flex align-items-center justify-content-center">
-                                                <span className="text-white">{userData?.username.substring(0, 2)}</span>
+                                                <span className="text-white">{userData?.username?.substring(0, 2)}</span>
                                             </div>
                                         </div>
                                         <div>
                                             <div className="fw-bold">{userData?.username}</div>
-                                            {/* <div className="small text-muted">{userData?.username}</div> */}
                                         </div>
                                     </div>
                                 </li>
                                 <li><hr className="dropdown-divider" /></li>
                                 <li>
-                                    <Link className="dropdown-item" to="/student/profile">
+                                    <Link className="dropdown-item" to="/instructor/profile/">
                                         <i className="fas fa-user me-2"></i> Profile
                                     </Link>
                                 </li>
@@ -182,7 +116,7 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
             <div className={`sidebar bg-dark text-white ${sidebarCollapsed ? 'collapsed' : ''}`}>
                 <div className="sidebar-header d-flex align-items-center justify-content-between p-3 border-bottom border-secondary">
                     {!sidebarCollapsed && (
-                        <Link to="/instructor/coupons/" className="d-flex align-items-center text-decoration-none">
+                        <Link to="/instructor/dashboard/" className="d-flex align-items-center text-decoration-none">
                             <i className="fas fa-user-graduate fs-4 me-2 text-primary"></i>
                             <h5 className="mb-0 text-white fw-bold">Teacher Portal</h5>
                         </Link>
@@ -197,8 +131,8 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
 
                 <nav className="sidebar-nav">
                     <Link
-                        to="/dashboard"
-                        className={`nav-link ${isActive('/dashboard') ? 'active' : ''}`}
+                        to="/instructor/dashboard/"
+                        className={`nav-link ${isActive('/instructor/dashboard/') ? 'active' : ''}`}
                         onMouseEnter={() => setActiveHover('dashboard')}
                         onMouseLeave={() => setActiveHover(null)}
                     >
@@ -211,10 +145,11 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                         )}
                     </Link>
 
+                    {/* Courses Dropdown */}
                     <div className={`nav-item ${dropdownOpen.courses ? 'show' : ''}`}>
                         <a
                             href="#"
-                            className={`nav-link ${isPathActive('/courses') ? 'active' : ''}`}
+                            className={`nav-link ${isPathActive('/instructor/courses') ? 'active' : ''}`}
                             onClick={(e) => {
                                 e.preventDefault();
                                 if (!sidebarCollapsed) toggleDropdown('courses');
@@ -239,45 +174,31 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                         {(!sidebarCollapsed || activeHover === 'courses') && dropdownOpen.courses && (
                             <div className="submenu">
                                 <Link
-                                    to="/courses"
-                                    className={`nav-link ${isActive('/courses') ? 'active' : ''}`}
+                                    to="/instructor/courses/"
+                                    className={`nav-link ${isActive('/instructor/courses/') ? 'active' : ''}`}
                                     onMouseEnter={() => setActiveHover('all-courses')}
                                     onMouseLeave={() => setActiveHover('courses')}
                                 >
                                     <div className="nav-icon">
                                         <i className="fas fa-circle-notch fa-xs"></i>
                                     </div>
-                                    <span>All Courses</span>
+                                    <span>My Courses</span>
                                     {sidebarCollapsed && activeHover === 'all-courses' && (
-                                        <div className="sidebar-tooltip">All Courses</div>
+                                        <div className="sidebar-tooltip">My Courses</div>
                                     )}
                                 </Link>
                                 <Link
-                                    to="/courses/enrolled"
-                                    className={`nav-link ${isActive('/courses/enrolled') ? 'active' : ''}`}
-                                    onMouseEnter={() => setActiveHover('enrolled')}
+                                    to="/instructor/create-course/"
+                                    className={`nav-link ${isActive('/instructor/create-course/') ? 'active' : ''}`}
+                                    onMouseEnter={() => setActiveHover('create-course')}
                                     onMouseLeave={() => setActiveHover('courses')}
                                 >
                                     <div className="nav-icon">
                                         <i className="fas fa-circle-notch fa-xs"></i>
                                     </div>
-                                    <span>Enrolled</span>
-                                    {sidebarCollapsed && activeHover === 'enrolled' && (
-                                        <div className="sidebar-tooltip">Enrolled</div>
-                                    )}
-                                </Link>
-                                <Link
-                                    to="/courses/completed"
-                                    className={`nav-link ${isActive('/courses/completed') ? 'active' : ''}`}
-                                    onMouseEnter={() => setActiveHover('completed')}
-                                    onMouseLeave={() => setActiveHover('courses')}
-                                >
-                                    <div className="nav-icon">
-                                        <i className="fas fa-circle-notch fa-xs"></i>
-                                    </div>
-                                    <span>Completed</span>
-                                    {sidebarCollapsed && activeHover === 'completed' && (
-                                        <div className="sidebar-tooltip">Completed</div>
+                                    <span>Create Course</span>
+                                    {sidebarCollapsed && activeHover === 'create-course' && (
+                                        <div className="sidebar-tooltip">Create Course</div>
                                     )}
                                 </Link>
                             </div>
@@ -285,153 +206,124 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
                     </div>
 
                     <Link
-                        to="/assignments"
-                        className={`nav-link ${isPathActive('/assignments') ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveHover('assignments')}
+                        to="/instructor/students/"
+                        className={`nav-link ${isPathActive('/instructor/students/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('students')}
                         onMouseLeave={() => setActiveHover(null)}
                     >
                         <div className="nav-icon">
-                            <i className="fas fa-tasks"></i>
+                            <i className="fas fa-users"></i>
                         </div>
-                        {!sidebarCollapsed && <span>Assignments</span>}
-                        {sidebarCollapsed && activeHover === 'assignments' && (
-                            <div className="sidebar-tooltip">Assignments</div>
+                        {!sidebarCollapsed && <span>Students</span>}
+                        {sidebarCollapsed && activeHover === 'students' && (
+                            <div className="sidebar-tooltip">Students</div>
                         )}
                     </Link>
 
                     <Link
-                        to="/grades"
-                        className={`nav-link ${isPathActive('/grades') ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveHover('grades')}
+                        to="/instructor/earning/"
+                        className={`nav-link ${isPathActive('/instructor/earning/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('earning')}
+                        onMouseLeave={() => setActiveHover(null)}
+                    >
+                        <div className="nav-icon">
+                            <i className="fas fa-money-bill-wave"></i>
+                        </div>
+                        {!sidebarCollapsed && <span>Earnings</span>}
+                        {sidebarCollapsed && activeHover === 'earning' && (
+                            <div className="sidebar-tooltip">Earnings</div>
+                        )}
+                    </Link>
+
+                    <Link
+                        to="/instructor/orders/"
+                        className={`nav-link ${isPathActive('/instructor/orders/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('orders')}
+                        onMouseLeave={() => setActiveHover(null)}
+                    >
+                        <div className="nav-icon">
+                            <i className="fas fa-shopping-cart"></i>
+                        </div>
+                        {!sidebarCollapsed && <span>Orders</span>}
+                        {sidebarCollapsed && activeHover === 'orders' && (
+                            <div className="sidebar-tooltip">Orders</div>
+                        )}
+                    </Link>
+
+                    <Link
+                        to="/instructor/coupons/"
+                        className={`nav-link ${isPathActive('/instructor/coupons/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('coupons')}
+                        onMouseLeave={() => setActiveHover(null)}
+                    >
+                        <div className="nav-icon">
+                            <i className="fas fa-tags"></i>
+                        </div>
+                        {!sidebarCollapsed && <span>Coupons</span>}
+                        {sidebarCollapsed && activeHover === 'coupons' && (
+                            <div className="sidebar-tooltip">Coupons</div>
+                        )}
+                    </Link>
+
+                    <Link
+                        to="/instructor/reviews/"
+                        className={`nav-link ${isPathActive('/instructor/reviews/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('reviews')}
                         onMouseLeave={() => setActiveHover(null)}
                     >
                         <div className="nav-icon">
                             <i className="fas fa-star"></i>
                         </div>
-                        {!sidebarCollapsed && <span>Grades</span>}
-                        {sidebarCollapsed && activeHover === 'grades' && (
-                            <div className="sidebar-tooltip">Grades</div>
+                        {!sidebarCollapsed && <span>Reviews</span>}
+                        {sidebarCollapsed && activeHover === 'reviews' && (
+                            <div className="sidebar-tooltip">Reviews</div>
                         )}
                     </Link>
 
                     <Link
-                        to="/progress"
-                        className={`nav-link ${isPathActive('/progress') ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveHover('progress')}
+                        to="/instructor/teacherNotifications/"
+                        className={`nav-link ${isPathActive('/instructor/teacherNotifications/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('notifications')}
                         onMouseLeave={() => setActiveHover(null)}
                     >
                         <div className="nav-icon">
-                            <i className="fas fa-chart-line"></i>
+                            <i className="fas fa-bell"></i>
                         </div>
-                        {!sidebarCollapsed && <span>Progress</span>}
-                        {sidebarCollapsed && activeHover === 'progress' && (
-                            <div className="sidebar-tooltip">Progress</div>
-                        )}
-                    </Link>
-
-                    <div className={`nav-item ${dropdownOpen.resources ? 'show' : ''}`}>
-                        <a
-                            href="#"
-                            className={`nav-link ${isPathActive('/resources') ? 'active' : ''}`}
-                            onClick={(e) => {
-                                e.preventDefault();
-                                if (!sidebarCollapsed) toggleDropdown('resources');
-                            }}
-                            onMouseEnter={() => setActiveHover('resources')}
-                            onMouseLeave={() => setActiveHover(null)}
-                        >
-                            <div className="nav-icon">
-                                <i className="fas fa-file-alt"></i>
-                            </div>
-                            {!sidebarCollapsed && (
-                                <>
-                                    <span>Resources</span>
-                                    <i className={`fas fa-chevron-${dropdownOpen.resources ? 'down' : 'right'} ms-auto transition-all`}></i>
-                                </>
-                            )}
-                            {sidebarCollapsed && activeHover === 'resources' && (
-                                <div className="sidebar-tooltip">Resources</div>
-                            )}
-                        </a>
-
-                        {(!sidebarCollapsed || activeHover === 'resources') && dropdownOpen.resources && (
-                            <div className="submenu">
-                                <Link
-                                    to="/resources/library"
-                                    className={`nav-link ${isActive('/resources/library') ? 'active' : ''}`}
-                                    onMouseEnter={() => setActiveHover('library')}
-                                    onMouseLeave={() => setActiveHover('resources')}
-                                >
-                                    <div className="nav-icon">
-                                        <i className="fas fa-circle-notch fa-xs"></i>
-                                    </div>
-                                    <span>Library</span>
-                                    {sidebarCollapsed && activeHover === 'library' && (
-                                        <div className="sidebar-tooltip">Library</div>
-                                    )}
-                                </Link>
-                                <Link
-                                    to="/resources/downloads"
-                                    className={`nav-link ${isActive('/resources/downloads') ? 'active' : ''}`}
-                                    onMouseEnter={() => setActiveHover('downloads')}
-                                    onMouseLeave={() => setActiveHover('resources')}
-                                >
-                                    <div className="nav-icon">
-                                        <i className="fas fa-circle-notch fa-xs"></i>
-                                    </div>
-                                    <span>Downloads</span>
-                                    {sidebarCollapsed && activeHover === 'downloads' && (
-                                        <div className="sidebar-tooltip">Downloads</div>
-                                    )}
-                                </Link>
-                            </div>
-                        )}
-                    </div>
-
-                    <Link
-                        to="/calendar"
-                        className={`nav-link ${isPathActive('/calendar') ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveHover('calendar')}
-                        onMouseLeave={() => setActiveHover(null)}
-                    >
-                        <div className="nav-icon">
-                            <i className="fas fa-calendar-alt"></i>
-                        </div>
-                        {!sidebarCollapsed && <span>Calendar</span>}
-                        {sidebarCollapsed && activeHover === 'calendar' && (
-                            <div className="sidebar-tooltip">Calendar</div>
+                        {!sidebarCollapsed && <span>Notifications</span>}
+                        {sidebarCollapsed && activeHover === 'notifications' && (
+                            <div className="sidebar-tooltip">Notifications</div>
                         )}
                     </Link>
 
                     <Link
-                        to="/certificates"
-                        className={`nav-link ${isPathActive('/certificates') ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveHover('certificates')}
+                        to="/instructor/questions-answers/"
+                        className={`nav-link ${isPathActive('/instructor/questions-answers/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('qa')}
                         onMouseLeave={() => setActiveHover(null)}
                     >
                         <div className="nav-icon">
-                            <i className="fas fa-certificate"></i>
+                            <i className="fas fa-question-circle"></i>
                         </div>
-                        {!sidebarCollapsed && <span>Certificates</span>}
-                        {sidebarCollapsed && activeHover === 'certificates' && (
-                            <div className="sidebar-tooltip">Certificates</div>
+                        {!sidebarCollapsed && <span>Q&A</span>}
+                        {sidebarCollapsed && activeHover === 'qa' && (
+                            <div className="sidebar-tooltip">Q&A</div>
                         )}
                     </Link>
 
                     <hr className="border-secondary mx-3 my-2" />
 
                     <Link
-                        to="/support"
-                        className={`nav-link ${isPathActive('/support') ? 'active' : ''}`}
-                        onMouseEnter={() => setActiveHover('support')}
+                        to="/instructor/profile/"
+                        className={`nav-link ${isPathActive('/instructor/profile/') ? 'active' : ''}`}
+                        onMouseEnter={() => setActiveHover('profile')}
                         onMouseLeave={() => setActiveHover(null)}
                     >
                         <div className="nav-icon">
-                            <i className="fas fa-question-circle"></i>
+                            <i className="fas fa-user"></i>
                         </div>
-                        {!sidebarCollapsed && <span>Support</span>}
-                        {sidebarCollapsed && activeHover === 'support' && (
-                            <div className="sidebar-tooltip">Support</div>
+                        {!sidebarCollapsed && <span>Profile</span>}
+                        {sidebarCollapsed && activeHover === 'profile' && (
+                            <div className="sidebar-tooltip">Profile</div>
                         )}
                     </Link>
 
@@ -750,4 +642,4 @@ body {
     );
 };
 
-export default BaseSidebar;
+export default TBaseSidebar;

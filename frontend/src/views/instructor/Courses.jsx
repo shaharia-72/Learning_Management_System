@@ -5,47 +5,48 @@ import Sidebar from "./Partials/Sidebar";
 import Header from "./Partials/Header";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
+import TBaseSidebar from '../partials/TBaseSidebar';
 
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import { Link } from "react-router-dom";
 
 function Courses() {
-    const [courses, setCourses] = useState([]);
+  const [courses, setCourses] = useState([]);
 
-    const fetchCourseData = () => {
-      useAxios()
-        .get(`teacher/course-lists/${UserData()?.teacher_id}/`)
-        .then((res) => {
-          console.log(res.data);
-          setCourses(res.data);
-        });
-    };
+  const fetchCourseData = () => {
+    useAxios()
+      .get(`teacher/course-lists/${UserData()?.teacher_id}/`)
+      .then((res) => {
+        console.log(res.data);
+        setCourses(res.data);
+      });
+  };
 
-    useEffect(() => {
+  useEffect(() => {
+    fetchCourseData();
+  }, []);
+
+  const handleSearch = (event) => {
+    const query = event.target.value.toLowerCase();
+    console.log(query);
+    if (query === "") {
       fetchCourseData();
-    }, []);
-
-    const handleSearch = (event) => {
-      const query = event.target.value.toLowerCase();
-      console.log(query);
-      if (query === "") {
-        fetchCourseData();
-      } else {
-        const filtered = courses.filter((c) => {
-          return c.title.toLowerCase().includes(query);
-        });
-        setCourses(filtered);
-      }
-    };
+    } else {
+      const filtered = courses.filter((c) => {
+        return c.title.toLowerCase().includes(query);
+      });
+      setCourses(filtered);
+    }
+  };
 
 
-    
 
-    
+
+
   return (
     <>
-      <BaseHeader />
+      <TBaseHeader />
 
       <section className="pt-5 pb-5">
         <div className="container">

@@ -12,6 +12,7 @@ import { ProfileContext } from "../plugin/Context";
 import BaseSidebar from '../partials/BaseSidebar';
 import { Link } from "react-router-dom";
 import Toast from "../plugin/Toast";
+import TBaseSidebar from '../partials/TBaseSidebar';
 
 function Profile() {
   const [profile, setProfile] = useContext(ProfileContext);
@@ -218,7 +219,7 @@ function Profile() {
 
   return (
     <div className="d-flex">
-      <BaseSidebar
+      <TBaseSidebar
         sidebarCollapsed={sidebarCollapsed}
         setSidebarCollapsed={setSidebarCollapsed}
         user={UserData()}

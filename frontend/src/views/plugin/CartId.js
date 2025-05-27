@@ -1,26 +1,25 @@
 function CartId() {
   const generateRandomString = () => {
     const length = 6;
-    const characters = "1234567890";
+    const characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
     let randomString = "";
 
-    for(let i = 0; i < length; i++){
-        const randomIndex = Math.floor(Math.random() * characters.length) 
-        randomString += characters.charAt(randomIndex)
+    for (let i = 0; i < length; i++) {
+      const randomIndex = Math.floor(Math.random() * characters.length);
+      randomString += characters.charAt(randomIndex);
     }
 
-    localStorage.setItem('randomString', randomString)
+    localStorage.setItem("randomString", randomString);
+    return randomString;
   };
 
-  const existingRandomString = localStorage.getItem("randomString");
+  let existingRandomString = localStorage.getItem("randomString");
 
-  if(!existingRandomString){
-    generateRandomString()
-  } else {
-    // pass
+  if (!existingRandomString) {
+    existingRandomString = generateRandomString();
   }
 
-  return existingRandomString
+  return existingRandomString;
 }
 
-export default CartId
+export default CartId;

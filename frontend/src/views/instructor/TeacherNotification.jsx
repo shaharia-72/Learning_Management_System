@@ -8,6 +8,7 @@ import BaseSidebar from "../partials/BaseSidebar";
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
+import TBaseSidebar from '../partials/TBaseSidebar';
 
 function TeacherNotification() {
   const [notifications, setNotifications] = useState([]);
@@ -60,7 +61,7 @@ function TeacherNotification() {
 
   return (
     <div className="d-flex">
-      <BaseSidebar
+      <TBaseSidebar
         sidebarCollapsed={sidebarCollapsed}
         setSidebarCollapsed={setSidebarCollapsed}
         user={UserData()}

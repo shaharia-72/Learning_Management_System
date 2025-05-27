@@ -6,7 +6,7 @@ import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Swal from "sweetalert2";
 import BaseSidebar from '../partials/BaseSidebar';
-
+import TBaseSidebar from '../partials/TBaseSidebar';
 function CourseEdit() {
   const { course_id } = useParams();
   const navigate = useNavigate();
@@ -415,7 +415,7 @@ function CourseEdit() {
 
   return (
     <div className="d-flex">
-      <BaseSidebar
+      <TBaseSidebar
         sidebarCollapsed={sidebarCollapsed}
         setSidebarCollapsed={setSidebarCollapsed}
         user={UserData()}

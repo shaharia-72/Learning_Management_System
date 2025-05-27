@@ -203,12 +203,11 @@ function Students() {
 
   return (
     <div className="students-management">
-      <BaseSidebar
+      <TBaseSidebar
         sidebarCollapsed={sidebarCollapsed}
         setSidebarCollapsed={setSidebarCollapsed}
         user={UserData()}
       />
-
       <main className="main-content">
         <div className="container-fluid py-4 px-4">
           <div className="my-students-section">

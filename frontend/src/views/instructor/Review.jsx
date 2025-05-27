@@ -217,7 +217,7 @@ function Review() {
 
   return (
     <div className="review-management">
-      <BaseSidebar
+      <TBaseSidebar
         sidebarCollapsed={sidebarCollapsed}
         setSidebarCollapsed={setSidebarCollapsed}
         user={UserData()}
