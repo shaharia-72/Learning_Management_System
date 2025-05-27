@@ -192,7 +192,7 @@ function Checkout() {
                       id="yourName"
                       placeholder="Name"
                       readOnly
-                      value={order.full_name}
+                      value={order.first_name}
                     />
                   </div>
                   <div className="col-md-12 bg-light-input">

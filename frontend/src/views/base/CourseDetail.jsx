@@ -6,12 +6,20 @@ import BaseFooter from '../partials/BaseFooter'
 import moment from 'moment'
 import useAxios from '../../utils/useAxios'
 import { useParams } from 'react-router-dom'
+import CartId from "../plugin/CartId";
+import GetCurrentAddress from "../plugin/UserCountry";
+import Toast from "../plugin/Toast";
+import UserData from '../plugin/UserData'
 
 function CourseDetail() {
   const [course, setCourse] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   const param = useParams();
+  const [cartCount, setCartCount] = useState(0);
+  const [addToCartBtn, setAddToCartBtn] = useState("Add To Cart");
+  const [isInWishlist, setIsInWishlist] = useState(false);
+  const currentAddress = GetCurrentAddress();
 
   useEffect(() => {
     const fetchCourse = async () => {
@@ -21,6 +29,11 @@ function CourseDetail() {
         const response = await useAxios().get(`/course/course-detail/${param.slug}/`);
         setCourse(response.data);
         console.log(response.data);
+
+        // Check if course is in wishlist
+        if (UserData()?.user_id) {
+          checkWishlistStatus(response.data.id);
+        }
       } catch (error) {
         setError(error);
         console.error("Error fetching course: ", error);
@@ -29,7 +42,87 @@ function CourseDetail() {
       }
     };
     fetchCourse();
+    fetchCartCount();
   }, [param.slug]);
+
+
+  const fetchCartCount = async () => {
+    try {
+      const cartResponse = await useAxios().get(`course/cart-list/${CartId()}/`);
+      setCartCount(cartResponse.data?.length || 0);
+    } catch (error) {
+      console.error("Failed to fetch cart list:", error);
+    }
+  };
+
+
+  const checkWishlistStatus = async (courseId) => {
+    try {
+      const response = await useAxios().get(`student/wishlist-check/${UserData()?.user_id}/${courseId}/`);
+      setIsInWishlist(response.data.is_in_wishlist);
+    } catch (error) {
+      console.error("Error checking wishlist status:", error);
+    }
+  };
+
+  const addToCart = async () => {
+    if (!course) return;
+
+    setAddToCartBtn("Adding To Cart");
+
+    const formdata = new FormData();
+    formdata.append("course_id", course.id);
+    formdata.append("user_id", UserData()?.user_id || "");
+    formdata.append("price", course.price);
+    formdata.append("country_name", currentAddress || "");
+    formdata.append("cart_id", CartId());
+
+    try {
+      const response = await useAxios().post(`cart/course-Cart/`, formdata);
+      console.log(response.data);
+      setAddToCartBtn("Added To Cart");
+
+      Toast().fire({
+        title: "Added To Cart",
+        icon: "success",
+      });
+
+      // Update cart count
+      await fetchCartCount();
+    } catch (error) {
+      console.error("Add to cart failed:", error);
+      setAddToCartBtn("Add To Cart");
+
+      Toast().fire({
+        title: error.response?.data?.message || "Failed to Add to Cart",
+        icon: "error",
+      });
+    }
+  };
+
+  const addToWishlist = async () => {
+    if (!course) return;
+
+    const formdata = new FormData();
+    formdata.append("user_id", UserData()?.user_id);
+    formdata.append("course_id", course.id);
+
+    try {
+      const res = await useAxios().post(`student/wishlist/${UserData()?.user_id}/`, formdata);
+      setIsInWishlist(!isInWishlist);
+
+      Toast().fire({
+        icon: "success",
+        title: res.data.message || (isInWishlist ? "Removed from wishlist" : "Added to wishlist"),
+      });
+    } catch (error) {
+      console.error("Error updating wishlist:", error);
+      Toast().fire({
+        icon: "error",
+        title: error.response?.data?.message || "Failed to update wishlist",
+      });
+    }
+  };
 
 
   return (
@@ -95,8 +188,15 @@ function CourseDetail() {
 
                   {/* CTA Buttons */}
                   <div className="d-flex flex-wrap gap-3 mb-4">
-                    <button className="btn btn-primary px-4 py-3 fw-bold">
+                    {/* <button className="btn btn-primary px-4 py-3 fw-bold">
                       <i className="fas fa-shopping-cart me-2"></i> Enroll Now
+                    </button> */}
+                    <button
+                      className="btn btn-primary btn-lg"
+                      onClick={addToCart}
+                      disabled={addToCartBtn === "Added To Cart"}
+                    >
+                      <i className="fas fa-shopping-cart me-2"></i> {addToCartBtn}
                     </button>
                     <button
                       className="btn btn-outline-primary px-4 py-3 fw-bold"
@@ -635,11 +735,19 @@ function CourseDetail() {
                       </div>
 
                       <div className="d-grid gap-2 mb-3">
-                        <button className="btn btn-primary btn-lg">
-                          <i className="fas fa-shopping-cart me-2"></i> Add to Cart
+                        <button
+                          className="btn btn-primary btn-lg"
+                          onClick={addToCart}
+                          disabled={addToCartBtn === "Added To Cart"}
+                        >
+                          <i className="fas fa-shopping-cart me-2"></i> {addToCartBtn}
                         </button>
-                        <button className="btn btn-outline-primary btn-lg">
-                          <i className="fas fa-heart me-2"></i> Wishlist
+                        <button
+                          className={`btn ${isInWishlist ? 'btn-danger' : 'btn-outline-primary'} btn-lg`}
+                          onClick={addToWishlist}
+                        >
+                          <i className={`fas ${isInWishlist ? 'fa-heart' : 'fa-heart'} me-2`}></i>
+                          {isInWishlist ? 'In Wishlist' : 'Wishlist'}
                         </button>
                       </div>
 
