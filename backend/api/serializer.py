@@ -257,6 +257,7 @@ class CourseSerializer(serializers.ModelSerializer):
     class Meta:
         fields = ["id", "category", "teacher", "file", "image", "title", "description", "price", "language", "level", "platform_status", "teacher_course_status", "featured", "course_id", "slug", "students", "curriculum", "lectures", "average_rating", "rating_count", "reviews",]
         model = api_models.Course
+        # read_only_fields = ('teacher',)
     def __init__(self,*args, **kwargs ):
         super(CourseSerializer, self).__init__(*args,**kwargs)
         request = self.context.get("request")
@@ -274,3 +275,13 @@ class TeacherSummarySerializer(serializers.Serializer):
     total_students = serializers.IntegerField(default=0)
     total_revenue = serializers.IntegerField(default=0)
     monthly_revenue = serializers.IntegerField(default=0)
+    
+    
+    
+class UserProfileSerializer(serializers.ModelSerializer):
+    teacher = TeacherSerializer(source='teacher', read_only=True)
+    
+    class Meta:
+        model = Profile
+        fields = '__all__'
+        extra_fields = ['teacher']

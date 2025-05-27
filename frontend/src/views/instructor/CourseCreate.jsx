@@ -1,22 +1,17 @@
 import { useState, useEffect } from "react";
 import { CKEditor } from "@ckeditor/ckeditor5-react";
 import ClassicEditor from "@ckeditor/ckeditor5-build-classic";
-
-import Sidebar from "./Partials/Sidebar";
-import Header from "./Partials/Header";
-import BaseHeader from "../partials/BaseHeader";
-import BaseFooter from "../partials/BaseFooter";
 import { Link } from "react-router-dom";
-
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Swal from "sweetalert2";
+import BaseSidebar from '../partials/BaseSidebar';
 
 function CourseCreate() {
   const [course, setCourse] = useState({
-    category: 0,
-    file: "",
-    image: "",
+    category: "",
+    file: null,
+    image: { file: null, preview: "" },
     title: "",
     description: "",
     price: "",
@@ -25,54 +20,55 @@ function CourseCreate() {
     teacher_course_status: "",
   });
 
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [category, setCategory] = useState([]);
-  const [progress, setProgress] = useState(0);
-  const [ckEdtitorData, setCKEditorData] = useState("");
-
   const [variants, setVariants] = useState([
     {
       title: "",
-      items: [{ title: "", description: "", file: "", preview: false }],
+      items: [{
+        title: "",
+        description: "",
+        file: null,
+        preview: false,
+        duration: "",
+        videoType: "upload" // 'upload' or 'external'
+      }],
     },
   ]);
 
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeAccordion, setActiveAccordion] = useState(0);
+
   useEffect(() => {
     useAxios()
-      .get(`course/category/`)
+      .get(`course/course-category/`)
       .then((res) => {
         setCategory(res.data);
       });
   }, []);
 
-  console.log(category);
-
   const handleCourseInputChange = (event) => {
     setCourse({
       ...course,
-      [event.target.name]:
-        event.target.type === "checkbox"
-          ? event.target.checked
-          : event.target.value,
+      [event.target.name]: event.target.value,
     });
   };
 
   const handleCkEditorChange = (event, editor) => {
     const data = editor.getData();
-    setCKEditorData(data);
-    console.log(ckEdtitorData);
+    setCourse({ ...course, description: data });
   };
+
 
   const handleCourseImageChange = (event) => {
     const file = event.target.files[0];
-    console.log(file);
-
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
         setCourse({
           ...course,
           image: {
-            file: event.target.files[0],
+            file: file,
             preview: reader.result,
           },
         });
@@ -84,7 +80,7 @@ function CourseCreate() {
   const handleCourseIntroVideoChange = (event) => {
     setCourse({
       ...course,
-      [event.target.name]: event.target.files[0],
+      file: event.target.files[0],
     });
   };
 
@@ -92,25 +88,12 @@ function CourseCreate() {
     const updatedVariants = [...variants];
     updatedVariants[index][propertyName] = value;
     setVariants(updatedVariants);
-
-    console.log(`Name: ${propertyName} - value: ${value} - Index: ${index}`);
-    console.log(variants);
   };
 
-  const handleItemChange = (
-    variantIndex,
-    itemIndex,
-    propertyName,
-    value,
-    type
-  ) => {
+  const handleItemChange = (variantIndex, itemIndex, propertyName, value) => {
     const updatedVariants = [...variants];
     updatedVariants[variantIndex].items[itemIndex][propertyName] = value;
     setVariants(updatedVariants);
-
-    console.log(
-      `Name: ${propertyName} - value: ${value} - Index: ${variantIndex} ItemIndex: ${itemIndex} - type: ${type}`
-    );
   };
 
   const addVariant = () => {
@@ -118,15 +101,32 @@ function CourseCreate() {
       ...variants,
       {
         title: "",
-        items: [{ title: "", description: "", file: "", preview: false }],
+        items: [{
+          title: "",
+          description: "",
+          file: null,
+          preview: false,
+          duration: "",
+          videoType: "upload"
+        }],
       },
     ]);
+    setActiveAccordion(variants.length);
   };
 
   const removeVariant = (index) => {
-    const updatedVariants = [...variants];
-    updatedVariants.splice(index, 1);
-    setVariants(updatedVariants);
+    if (variants.length > 1) {
+      const updatedVariants = [...variants];
+      updatedVariants.splice(index, 1);
+      setVariants(updatedVariants);
+      setActiveAccordion(Math.min(index, updatedVariants.length - 1));
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "Cannot remove",
+        text: "You must have at least one section",
+      });
+    }
   };
 
   const addItem = (variantIndex) => {
@@ -134,256 +134,319 @@ function CourseCreate() {
     updatedVariants[variantIndex].items.push({
       title: "",
       description: "",
-      file: "",
+      file: null,
       preview: false,
+      duration: "",
+      videoType: "upload"
     });
-
     setVariants(updatedVariants);
   };
 
   const removeItem = (variantIndex, itemIndex) => {
     const updatedVariants = [...variants];
-    updatedVariants[variantIndex].items.splice(itemIndex, 1);
-    setVariants(updatedVariants);
+    if (updatedVariants[variantIndex].items.length > 1) {
+      updatedVariants[variantIndex].items.splice(itemIndex, 1);
+      setVariants(updatedVariants);
+    } else {
+      Swal.fire({
+        icon: "warning",
+        title: "Cannot remove",
+        text: "Each section must have at least one lesson",
+      });
+    }
+  };
+
+  const toggleAccordion = (index) => {
+    setActiveAccordion(activeAccordion === index ? null : index);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const formdata = new FormData();
-    formdata.append("title", course.title);
-    formdata.append("image", course.image.file);
-    formdata.append("description", ckEdtitorData);
-    formdata.append("category", course.category);
-    formdata.append("price", course.price);
-    formdata.append("level", course.level);
-    formdata.append("language", course.language);
-    formdata.append("teacher", parseInt(UserData()?.teacher_id));
-    console.log(course.category);
-    if (course.file !== null || course.file !== "") {
-      formdata.append("file", course.file || "");
-    }
+    setIsSubmitting(true);
 
-    variants.forEach((variant, variantIndex) => {
-      Object.entries(variant).forEach(([key, value]) => {
-        console.log(`Key: ${key} = value: ${value}`);
-        formdata.append(
-          `variants[${variantIndex}][variant_${key}]`,
-          String(value)
-        );
-      });
+    try {
+      const formdata = new FormData();
+      formdata.append("title", course.title);
+      formdata.append("image", course.image.file);
+      formdata.append("description", course.description);
+      formdata.append("category", course.category);
+      formdata.append("price", course.price);
+      formdata.append("level", course.level);
+      formdata.append("language", course.language);
+      formdata.append("teacher", parseInt(UserData()?.teacher_id));
 
-      variant.items.forEach((item, itemIndex) => {
-        Object.entries(item).forEach(([itemKey, itemValue]) => {
+      if (course.file) {
+        formdata.append("file", course.file);
+      }
+
+      variants.forEach((variant, variantIndex) => {
+        formdata.append(`variants[${variantIndex}][title]`, variant.title);
+
+        variant.items.forEach((item, itemIndex) => {
           formdata.append(
-            `variants[${variantIndex}][items][${itemIndex}][${itemKey}]`,
-            itemValue
+            `variants[${variantIndex}][items][${itemIndex}][title]`,
+            item.title
+          );
+          formdata.append(
+            `variants[${variantIndex}][items][${itemIndex}][description]`,
+            item.description
+          );
+          if (item.file) {
+            formdata.append(
+              `variants[${variantIndex}][items][${itemIndex}][file]`,
+              item.file
+            );
+          }
+          formdata.append(
+            `variants[${variantIndex}][items][${itemIndex}][preview]`,
+            item.preview.toString()
+          );
+          formdata.append(
+            `variants[${variantIndex}][items][${itemIndex}][duration]`,
+            item.duration
+          );
+          formdata.append(
+            `variants[${variantIndex}][items][${itemIndex}][videoType]`,
+            item.videoType
           );
         });
       });
-    });
 
-    const response = await useAxios().post(`teacher/course-create/`, formdata);
-    console.log(response.data);
-    Swal.fire({
-      icon: "success",
-      title: "Course Created Successfully"
-    })
+      await useAxios().post(`teacher/course-create/`, formdata);
+
+      Swal.fire({
+        icon: "success",
+        title: "Course Created Successfully",
+        showConfirmButton: false,
+        timer: 1500
+      }).then(() => {
+        window.location.href = "/instructor/courses/";
+      });
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: error.response?.data?.message || "An error occurred while creating the course",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
-    <>
-      <BaseHeader />
+    <div className="d-flex">
+      <BaseSidebar
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
+        user={UserData()}
+      />
 
-      <section className="pt-5 pb-5">
-        <div className="container">
-          {/* Header Here */}
-          <Header />
-          <div className="row mt-0 mt-md-4">
-            {/* Sidebar Here */}
-            <Sidebar />
-            <form className="col-lg-9 col-md-8 col-12" onSubmit={handleSubmit}>
-              <>
-                <section className="py-4 py-lg-6 bg-primary rounded-3">
-                  <div className="container">
-                    <div className="row">
-                      <div className="offset-lg-1 col-lg-10 col-md-12 col-12">
-                        <div className="d-lg-flex align-items-center justify-content-between">
-                          {/* Content */}
-                          <div className="mb-4 mb-lg-0">
-                            <h1 className="text-white mb-1">Add New Course</h1>
-                            <p className="mb-0 text-white lead">
-                              Just fill the form and create your courses.
-                            </p>
-                          </div>
-                          <div>
-                            <Link
-                              to="/instructor/courses/"
-                              className="btn"
-                              style={{ backgroundColor: "white" }}
-                            >
-                              {" "}
-                              <i className="fas fa-arrow-left"></i> Back to
-                              Course
-                            </Link>
-                            <a
-                              href="instructor-courses.html"
-                              className="btn btn-dark ms-2"
-                            >
-                              Save <i className="fas fa-check-circle"></i>
-                            </a>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </section>
-                <section className="pb-8 mt-5">
-                  <div className="card mb-3">
-                    {/* Basic Info Section */}
-                    <div className="card-header border-bottom px-4 py-3">
-                      <h4 className="mb-0">Basic Information</h4>
-                    </div>
-                    <div className="card-body">
-                      <label htmlFor="courseTHumbnail" className="form-label">
-                        Thumbnail Preview
-                      </label>
+      <div className="main-content flex-grow-1">
+        <div className="container-fluid py-4 px-4">
+          {/* Page Header */}
+          <div className="d-flex justify-content-between align-items-center mb-4">
+            <div>
+              <h1 className="h2 mb-0">Create New Course</h1>
+              <p className="mb-0 text-muted">Fill out the form to create your new course</p>
+            </div>
+            <div>
+              <Link
+                to="/instructor/dashboard/"
+                className="btn btn-outline-secondary me-2"
+              >
+                <i className="fas fa-arrow-left me-2"></i>Back to Courses
+              </Link>
+            </div>
+          </div>
+
+          <form onSubmit={handleSubmit}>
+            {/* Basic Information Card */}
+            <div className="card shadow-sm mb-4">
+              <div className="card-header bg-white border-bottom">
+                <h4 className="mb-0">Basic Information</h4>
+              </div>
+              <div className="card-body">
+                <div className="row">
+                  {/* Course Thumbnail */}
+                  <div className="col-md-6 mb-4">
+                    <label className="form-label fw-bold">Course Thumbnail</label>
+                    <div className="border rounded-3 p-3 text-center mb-3">
                       <img
+                        className="img-fluid rounded-2"
                         style={{
-                          width: "100%",
-                          height: "330px",
+                          maxHeight: "200px",
                           objectFit: "cover",
-                          borderRadius: "10px",
                         }}
-                        className="mb-4"
                         src={
                           course.image.preview ||
                           "https://www.eclosio.ong/wp-content/uploads/2018/08/default.png"
                         }
-                        alt=""
+                        alt="Course thumbnail"
                       />
-                      <div className="mb-3">
-                        <label htmlFor="courseTHumbnail" className="form-label">
-                          Course Thumbnail
-                        </label>
-                        <input
-                          id="courseTHumbnail"
-                          className="form-control"
-                          type="file"
-                          name="image"
-                          onChange={handleCourseImageChange}
-                        />
-                      </div>
-                      <div className="mb-3">
-                        <label htmlFor="courseTitle" className="form-label">
-                          Intro Video
-                        </label>
-                        <input
-                          id="introvideo"
-                          className="form-control"
-                          type="file"
-                          name="file"
-                          onChange={handleCourseIntroVideoChange}
-                        />
-                      </div>
-                      <div className="mb-3">
-                        <label htmlFor="courseTitle" className="form-label">
-                          Title
-                        </label>
-                        <input
-                          id="courseTitle"
-                          className="form-control"
-                          type="text"
-                          placeholder=""
-                          name="title"
-                          onChange={handleCourseInputChange}
-                        />
-                        <small>Write a 60 character course title.</small>
-                      </div>
-                      <div className="mb-3">
-                        <label className="form-label">Courses category</label>
-                        <select
-                          className="form-select"
-                          name="category"
-                          onChange={handleCourseInputChange}
-                        >
-                          <option value="">-------------</option>
-                          {category?.map((c, index) => (
-                            <option key={index} value={c.id}>
-                              {c.title}
-                            </option>
-                          ))}
-                        </select>
-                        <small>
-                          Help people find your courses by choosing categories
-                          that represent your course.
-                        </small>
-                      </div>
-                      <div className="mb-3">
+                    </div>
+                    <input
+                      className="form-control"
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      onChange={handleCourseImageChange}
+                      required
+                    />
+                    <small className="text-muted">
+                      Recommended size: 1280x720 pixels (Max 2MB)
+                    </small>
+                  </div>
+
+                  {/* Course Details */}
+                  <div className="col-md-6">
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Course Title</label>
+                      <input
+                        className="form-control"
+                        type="text"
+                        placeholder="e.g. Advanced JavaScript Techniques"
+                        name="title"
+                        onChange={handleCourseInputChange}
+                        required
+                        maxLength="60"
+                      />
+                      <small className="text-muted">
+                        Keep it concise and descriptive (60 characters max)
+                      </small>
+                    </div>
+
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Category</label>
+                      <select
+                        className="form-select"
+                        name="category"
+                        onChange={handleCourseInputChange}
+                        required
+                      >
+                        <option value="">Select a category</option>
+                        {category?.map((c, index) => (
+                          <option key={index} value={c.id}>
+                            {c.title}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="row">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-bold">Level</label>
                         <select
                           className="form-select"
                           onChange={handleCourseInputChange}
                           name="level"
+                          required
                         >
                           <option value="">Select level</option>
                           <option value="Beginner">Beginner</option>
-                          <option value="Intemediate">Intemediate</option>
+                          <option value="Intermediate">Intermediate</option>
                           <option value="Advanced">Advanced</option>
+                          <option value="All Levels">All Levels</option>
                         </select>
                       </div>
-
-                      <div className="mb-3">
+                      <div className="col-md-6 mb-3">
+                        <label className="form-label fw-bold">Language</label>
                         <select
                           className="form-select"
                           onChange={handleCourseInputChange}
                           name="language"
+                          required
                         >
                           <option value="">Select Language</option>
                           <option value="English">English</option>
                           <option value="Spanish">Spanish</option>
                           <option value="French">French</option>
+                          <option value="German">German</option>
+                          <option value="Other">Other</option>
                         </select>
                       </div>
-                      <div className="mb-3">
-                        <label className="form-label">Course Description</label>
-                        <CKEditor
-                          editor={ClassicEditor}
-                          data={ckEdtitorData}
-                          onChange={handleCkEditorChange}
-                          style={{ height: "400px" }}
-                          name="description"
-                          value={course.description || ""}
-                        />
-                        <small>A brief summary of your courses.</small>
-                      </div>
-                      <label htmlFor="courseTitle" className="form-label">
-                        Price
-                      </label>
-                      <input
-                        id="courseTitle"
-                        className="form-control"
-                        type="number"
-                        onChange={handleCourseInputChange}
-                        name="price"
-                        placeholder="$20.99"
-                      />
                     </div>
 
-                    {/* Curriculum Section */}
-                    <div className="card-header border-bottom px-4 py-3">
-                      <h4 className="mb-0">Curriculum</h4>
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Price ($)</label>
+                      <div className="input-group">
+                        <span className="input-group-text">$</span>
+                        <input
+                          className="form-control"
+                          type="number"
+                          onChange={handleCourseInputChange}
+                          name="price"
+                          placeholder="0.00"
+                          min="0"
+                          step="0.01"
+                          required
+                        />
+                      </div>
                     </div>
-                    <div className="card-body ">
-                      {variants.map((variant, variantIndex) => (
-                        <div
-                          className="border p-2 rounded-3 mb-3"
-                          style={{ backgroundColor: "#ededed" }}
+
+                    <div className="mb-3">
+                      <label className="form-label fw-bold">Intro Video</label>
+                      <input
+                        className="form-control"
+                        type="file"
+                        name="file"
+                        accept="video/*"
+                        onChange={handleCourseIntroVideoChange}
+                      />
+                      <small className="text-muted">
+                        Short video introducing your course (optional, Max 100MB)
+                      </small>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="mb-3">
+                  <label className="form-label fw-bold">Course Description</label>
+                  <textarea
+                    className="form-control"
+                    value={course.description}
+                    onChange={(e) => setCourse({ ...course, description: e.target.value })}
+                    rows="10"
+                  />
+                  <small className="text-muted">
+                    A detailed description of what students will learn (Minimum 200 characters)
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            {/* Curriculum Card */}
+            <div className="card shadow-sm mb-4">
+              <div className="card-header bg-white border-bottom">
+                <div className="d-flex justify-content-between align-items-center">
+                  <h4 className="mb-0">Curriculum</h4>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-primary"
+                    onClick={addVariant}
+                  >
+                    <i className="fas fa-plus me-2"></i>Add Section
+                  </button>
+                </div>
+              </div>
+              <div className="card-body">
+                {variants.map((variant, variantIndex) => (
+                  <div key={variantIndex} className="mb-4">
+                    <div className="accordion-item border-0">
+                      <h2 className="accordion-header">
+                        <button
+                          className={`accordion-button ${activeAccordion === variantIndex ? '' : 'collapsed'}`}
+                          type="button"
+                          onClick={() => toggleAccordion(variantIndex)}
                         >
-                          <div className="d-flex mb-4">
+                          <div className="d-flex align-items-center w-100">
+                            <span className="fw-bold me-3">
+                              Section {variantIndex + 1}:
+                            </span>
                             <input
                               type="text"
-                              placeholder="Section Name"
-                              required
-                              className="form-control"
+                              placeholder="Section Title (e.g. 'Getting Started')"
+                              className="form-control border-0 shadow-none bg-transparent p-0 flex-grow-1"
+                              value={variant.title}
                               onChange={(e) =>
                                 handleVariantChange(
                                   variantIndex,
@@ -391,137 +454,220 @@ function CourseCreate() {
                                   e.target.value
                                 )
                               }
+                              required
+                              onClick={(e) => e.stopPropagation()}
                             />
                             <button
-                              className="btn btn-danger ms-2"
                               type="button"
-                              onClick={() => removeVariant(variantIndex)}
+                              className="btn btn-sm btn-outline-danger ms-2"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                removeVariant(variantIndex);
+                              }}
                             >
                               <i className="fas fa-trash"></i>
                             </button>
                           </div>
+                        </button>
+                      </h2>
+                      <div className={`accordion-collapse collapse ${activeAccordion === variantIndex ? 'show' : ''}`}>
+                        <div className="accordion-body pt-3">
                           {variant.items.map((item, itemIndex) => (
-                            <div
-                              className=" mb-2 mt-2 shadow p-2 rounded-3 "
-                              style={{ border: "1px #bdbdbd solid" }}
-                            >
-                              <input
-                                type="text"
-                                placeholder="Lesson Title"
-                                className="form-control me-1 mt-2"
-                                name="title"
-                                onChange={(e) =>
-                                  handleItemChange(
-                                    variantIndex,
-                                    itemIndex,
-                                    "title",
-                                    e.target.value,
-                                    e.target.type
-                                  )
-                                }
-                              />
-                              <textarea
-                                name="description"
-                                id=""
-                                cols="30"
-                                className="form-control mt-2"
-                                placeholder="Lesson Description"
-                                rows="4"
-                                onChange={(e) =>
-                                  handleItemChange(
-                                    variantIndex,
-                                    itemIndex,
-                                    "description",
-                                    e.target.value,
-                                    e.target.type
-                                  )
-                                }
-                              ></textarea>
-                              <div className="row d-flex align-items-center">
-                                <div className="col-lg-8">
+                            <div key={itemIndex} className="card mb-3 border">
+                              <div className="card-body">
+                                <div className="d-flex justify-content-between align-items-center mb-3">
+                                  <h5 className="mb-0">Lesson {itemIndex + 1}</h5>
+                                  <button
+                                    type="button"
+                                    className="btn btn-sm btn-outline-danger"
+                                    onClick={() => removeItem(variantIndex, itemIndex)}
+                                  >
+                                    <i className="fas fa-trash me-2"></i>Remove
+                                  </button>
+                                </div>
+
+                                <div className="mb-3">
+                                  <label className="form-label fw-bold">Lesson Title</label>
                                   <input
-                                    type="file"
-                                    placeholder="Item Price"
-                                    className="form-control me-1 mt-2"
-                                    name="file"
+                                    type="text"
+                                    placeholder="Lesson title"
+                                    className="form-control"
+                                    value={item.title}
                                     onChange={(e) =>
                                       handleItemChange(
                                         variantIndex,
                                         itemIndex,
-                                        "file",
-                                        e.target.files[0],
-                                        e.target.type
+                                        "title",
+                                        e.target.value
                                       )
                                     }
+                                    required
                                   />
                                 </div>
-                                <div className="col-lg-4">
-                                  <label htmlFor={`checkbox${1}`}>
-                                    Preview
+
+                                <div className="mb-3">
+                                  <label className="form-label fw-bold">Lesson Description</label>
+                                  <CKEditor
+                                    editor={ClassicEditor}
+                                    data={item.description}
+                                    onChange={(event, editor) => {
+                                      const data = editor.getData();
+                                      handleItemChange(
+                                        variantIndex,
+                                        itemIndex,
+                                        "description",
+                                        data
+                                      );
+                                    }}
+                                    config={{
+                                      toolbar: [
+                                        'bold', 'italic', 'link', 'bulletedList', 'numberedList',
+                                        'undo', 'redo'
+                                      ]
+                                    }}
+                                  />
+                                </div>
+
+                                <div className="row">
+                                  <div className="col-md-6 mb-3">
+                                    <label className="form-label fw-bold">Video Type</label>
+                                    <select
+                                      className="form-select"
+                                      value={item.videoType}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          variantIndex,
+                                          itemIndex,
+                                          "videoType",
+                                          e.target.value
+                                        )
+                                      }
+                                    >
+                                      <option value="upload">Upload Video</option>
+                                      <option value="external">External URL</option>
+                                    </select>
+                                  </div>
+                                  <div className="col-md-6 mb-3">
+                                    <label className="form-label fw-bold">Duration (minutes)</label>
+                                    <input
+                                      type="number"
+                                      className="form-control"
+                                      placeholder="e.g. 45"
+                                      value={item.duration}
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          variantIndex,
+                                          itemIndex,
+                                          "duration",
+                                          e.target.value
+                                        )
+                                      }
+                                      min="1"
+                                    />
+                                  </div>
+                                </div>
+
+                                <div className="mb-3">
+                                  <label className="form-label fw-bold">
+                                    {item.videoType === 'upload' ? 'Video File' : 'Video URL'}
                                   </label>
+                                  {item.videoType === 'upload' ? (
+                                    <input
+                                      type="file"
+                                      className="form-control"
+                                      accept="video/*"
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          variantIndex,
+                                          itemIndex,
+                                          "file",
+                                          e.target.files[0]
+                                        )
+                                      }
+                                    />
+                                  ) : (
+                                    <input
+                                      type="url"
+                                      className="form-control"
+                                      placeholder="https://youtube.com/embed/..."
+                                      onChange={(e) =>
+                                        handleItemChange(
+                                          variantIndex,
+                                          itemIndex,
+                                          "file",
+                                          e.target.value
+                                        )
+                                      }
+                                    />
+                                  )}
+                                  <small className="text-muted">
+                                    {item.videoType === 'upload'
+                                      ? 'MP4 format recommended (Max 500MB)'
+                                      : 'Embed URL from YouTube, Vimeo, etc.'}
+                                  </small>
+                                </div>
+
+                                <div className="form-check form-switch mb-3">
                                   <input
+                                    className="form-check-input"
                                     type="checkbox"
-                                    className="form-check-input ms-2"
-                                    name=""
-                                    id={`checkbox${1}`}
+                                    id={`preview-${variantIndex}-${itemIndex}`}
+                                    checked={item.preview}
                                     onChange={(e) =>
                                       handleItemChange(
                                         variantIndex,
                                         itemIndex,
                                         "preview",
-                                        e.target.checked,
-                                        e.target.type
+                                        e.target.checked
                                       )
                                     }
                                   />
+                                  <label className="form-check-label" htmlFor={`preview-${variantIndex}-${itemIndex}`}>
+                                    Mark as Free Preview
+                                  </label>
                                 </div>
                               </div>
-                              <button
-                                className="btn btn-sm btn-outline-danger me-2 mt-2"
-                                type="button"
-                                onClick={() =>
-                                  removeItem(variantIndex, itemIndex)
-                                }
-                              >
-                                Delete Lesson <i className="fas fa-trash"></i>
-                              </button>
                             </div>
                           ))}
 
                           <button
-                            className="btn btn-sm btn-primary mt-2"
                             type="button"
+                            className="btn btn-outline-primary w-100"
                             onClick={() => addItem(variantIndex)}
                           >
-                            + Add Lesson
+                            <i className="fas fa-plus me-2"></i>Add Lesson to This Section
                           </button>
                         </div>
-                      ))}
-
-                      <button
-                        className="btn btn-sm btn-secondary w-100 mt-2"
-                        type="button"
-                        onClick={addVariant}
-                      >
-                        + New Section
-                      </button>
+                      </div>
                     </div>
                   </div>
-                  <button
-                    className="btn btn-lg btn-success w-100 mt-2"
-                    type="submit"
-                  >
-                    Create Course <i className="fas fa-check-circle"></i>
-                  </button>
-                </section>
-              </>
-            </form>
-          </div>
-        </div>
-      </section>
+                ))}
+              </div>
+            </div>
 
-      <BaseFooter />
-    </>
+            {/* Submit Button */}
+            <div className="d-grid">
+              <button
+                type="submit"
+                className="btn btn-primary btn-lg py-3"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span className="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    Creating Course...
+                  </>
+                ) : (
+                  <>
+                    <i className="fas fa-check-circle me-2"></i>Create Course
+                  </>
+                )}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
   );
 }
 

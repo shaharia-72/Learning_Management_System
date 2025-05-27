@@ -182,7 +182,7 @@ const BaseSidebar = ({ sidebarCollapsed, setSidebarCollapsed }) => {
             <div className={`sidebar bg-dark text-white ${sidebarCollapsed ? 'collapsed' : ''}`}>
                 <div className="sidebar-header d-flex align-items-center justify-content-between p-3 border-bottom border-secondary">
                     {!sidebarCollapsed && (
-                        <Link to="/student/dashboard/" className="d-flex align-items-center text-decoration-none">
+                        <Link to="/instructor/coupons/" className="d-flex align-items-center text-decoration-none">
                             <i className="fas fa-user-graduate fs-4 me-2 text-primary"></i>
                             <h5 className="mb-0 text-white fw-bold">Teacher Portal</h5>
                         </Link>

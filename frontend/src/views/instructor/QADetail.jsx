@@ -1,156 +1,136 @@
-import React from 'react'
-import { Link } from 'react-router-dom'
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import BaseSidebar from '../partials/BaseSidebar';
+import UserData from '../plugin/UserData';
+import useAxios from '../../utils/useAxios';
+import moment from 'moment';
 
-import BaseHeader from '../partials/BaseHeader'
-import BaseFooter from '../partials/BaseFooter'
-import Sidebar from './Partials/Sidebar'
-import Header from './Partials/Header'
+function TeacherQADetail() {
+    const { courseId } = useParams();
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+    const [messages, setMessages] = useState([]);
+    const [newMessage, setNewMessage] = useState('');
+    const [course, setCourse] = useState(null);
+    const [loading, setLoading] = useState(true);
 
-function QADetail() {
+    const fetchCourseQuestions = async () => {
+        try {
+            const response = await useAxios().get(`teacher/question-answer-detail/${UserData()?.teacher_id}/${courseId}/`);
+            setCourse(response.data.course);
+            setMessages(response.data.messages);
+            setLoading(false);
+        } catch (error) {
+            console.error("Error fetching questions:", error);
+            setLoading(false);
+        }
+    };
+
+    const handleSendMessage = async (e) => {
+        e.preventDefault();
+        if (!newMessage.trim()) return;
+
+        try {
+            const formData = new FormData();
+            formData.append('course_id', courseId);
+            formData.append('message', newMessage);
+            formData.append('teacher_id', UserData()?.teacher_id);
+
+            const response = await useAxios().post('teacher/question-answer-reply/', formData);
+            setMessages([...messages, response.data]);
+            setNewMessage('');
+        } catch (error) {
+            console.error("Error sending message:", error);
+        }
+    };
+
+    useEffect(() => {
+        fetchCourseQuestions();
+    }, [courseId]);
+
     return (
-        <>
-            <BaseHeader />
+        <div className="d-flex">
+            <BaseSidebar
+                sidebarCollapsed={sidebarCollapsed}
+                setSidebarCollapsed={setSidebarCollapsed}
+                user={UserData()}
+            />
 
-            <section className="pt-5 pb-5">
-                <div className="container">
-                    {/* Header Here */}
-                    <Header />
-                    <div className="row mt-0 mt-md-4">
-                        {/* Sidebar Here */}
-                        <Sidebar />
-                        <div className="col-lg-9 col-md-8 col-12">
-                            <h4 className="mb-0 mb-4"> <i className='fas fa-envelope'></i> Q/A - Angular Masterclass Course</h4>
+            <div className="main-content flex-grow-1 p-4">
+                <h4 className="mb-4">
+                    <i className="fas fa-envelope me-2 text-primary"></i>
+                    {course ? `Discussion: ${course.title}` : 'Loading...'}
+                </h4>
 
-                            <div className="card mb-4">
-                                <div className="card-header">
-                                    <span>Course: <b>Angular Masterclass Course</b></span> <br />
-                                    <span>Questions: <b>16</b></span>
-                                </div>
-                                <div className="p-2 p-sm-4">
-                                    <ul className="list-unstyled mb-0" style={{ overflowY: "scroll", height: "500px" }}>
-                                        <li className="comment-item mb-3">
-                                            <div className="d-flex">
-                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                    <a href="#">
-                                                        <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-2.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                                                    </a>
-                                                </div>
-                                                <div className="ms-2">
-                                                    {/* Comment by */}
-                                                    <div className="bg-light p-3 rounded w-100">
-                                                        <div className="d-flex w-100 justify-content-center">
-                                                            <div className="me-2 ">
-                                                                <h6 className="mb-1 lead fw-bold">
-                                                                    <a href="#!" className='text-decoration-none text-dark'> Jenny Adga </a><br />
-                                                                    <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                                                                </h6>
-                                                                <p className="mb-0 mt-3  ">Removed demands expense account
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                </div>
-                                            </div>
-                                        </li>
-
-                                        <li className="comment-item mb-3">
-                                            <div className="d-flex">
-                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                    <a href="#">
-                                                        <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-1.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                                                    </a>
-                                                </div>
-                                                <div className="ms-2">
-                                                    {/* Comment by */}
-                                                    <div className="bg-light p-3 rounded w-100">
-                                                        <div className="d-flex w-100 justify-content-center">
-                                                            <div className="me-2 ">
-                                                                <h6 className="mb-1 lead fw-bold">
-                                                                    <a href="#!" className='text-decoration-none text-dark'> Sam Freddy </a><br />
-                                                                    <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                                                                </h6>
-                                                                <p className="mb-0 mt-3  ">Removed demands expense account from the debby building in a hall  town tak with
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                </div>
-                                            </div>
-                                        </li>
-
-                                        <li className="comment-item mb-3">
-                                            <div className="d-flex">
-                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                    <a href="#">
-                                                        <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                                                    </a>
-                                                </div>
-                                                <div className="ms-2">
-                                                    {/* Comment by */}
-                                                    <div className="bg-light p-3 rounded w-100">
-                                                        <div className="d-flex w-100 justify-content-center">
-                                                            <div className="me-2 ">
-                                                                <h6 className="mb-1 lead fw-bold">
-                                                                    <a href="#!" className='text-decoration-none text-dark'> Louis Ferguson </a><br />
-                                                                    <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                                                                </h6>
-                                                                <p className="mb-0 mt-3  ">Removed demands expense account
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                </div>
-                                            </div>
-                                        </li>
-
-                                        <li className="comment-item mb-3">
-                                            <div className="d-flex">
-                                                <div className="avatar avatar-sm flex-shrink-0">
-                                                    <a href="#">
-                                                        <img className="avatar-img rounded-circle" src="https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-3.jpg" style={{ width: "40px", height: "40px", borderRadius: "50%", objectFit: "cover" }} alt="womans image" />
-                                                    </a>
-                                                </div>
-                                                <div className="ms-2">
-                                                    {/* Comment by */}
-                                                    <div className="bg-light p-3 rounded w-100">
-                                                        <div className="d-flex w-100 justify-content-center">
-                                                            <div className="me-2 ">
-                                                                <h6 className="mb-1 lead fw-bold">
-                                                                    <a href="#!" className='text-decoration-none text-dark'> Louis Ferguson </a><br />
-                                                                    <span style={{ fontSize: "12px", color: "gray" }}>5hrs Ago</span>
-                                                                </h6>
-                                                                <p className="mb-0 mt-3  ">Removed demands expense account
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-
-                                                </div>
-                                            </div>
-                                        </li>
-                                    </ul>
-
-                                    <form class="w-100 row">
-                                        <div className="col-lg-10">
-                                            <textarea class="one form-control pe-4 bg-light w-100" id="autoheighttextarea" rows="2" placeholder="Write a message..."></textarea>
-                                        </div>
-                                        <div className="col-lg-2">
-                                            <button class="btn btn-primary ms-2 mb-0 w-100" type="button">Post <i className='fas fa-paper-plane'></i></button>
-                                        </div>
-                                    </form>
+                <div className="card shadow-sm">
+                    <div className="card-header bg-white">
+                        {course && (
+                            <div className="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <h5 className="mb-1">{course.title}</h5>
+                                    <small className="text-muted">{messages.length} messages</small>
                                 </div>
                             </div>
-                        </div>
+                        )}
                     </div>
-                </div>
-            </section>
 
-            <BaseFooter />
-        </>
-    )
+                    {loading ? (
+                        <div className="text-center py-5">
+                            <div className="spinner-border text-primary" role="status">
+                                <span className="visually-hidden">Loading...</span>
+                            </div>
+                        </div>
+                    ) : (
+                        <div className="p-3 p-md-4">
+                            <div className="mb-3" style={{ maxHeight: '500px', overflowY: 'auto' }}>
+                                {messages.map((message) => (
+                                    <div key={message.id} className={`mb-3 ${message.is_teacher ? 'text-end' : ''}`}>
+                                        <div className="d-flex" style={message.is_teacher ? { flexDirection: 'row-reverse' } : {}}>
+                                            <img
+                                                src={message.sender_image ||
+                                                    (message.is_teacher
+                                                        ? "https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-2.jpg"
+                                                        : "https://geeksui.codescandy.com/geeks/assets/images/avatar/avatar-1.jpg")}
+                                                className="rounded-circle me-3"
+                                                style={{ width: '40px', height: '40px', objectFit: 'cover' }}
+                                                alt="avatar"
+                                            />
+                                            <div>
+                                                <div
+                                                    className={`p-3 rounded ${message.is_teacher ? 'bg-primary text-white' : 'bg-light'}`}
+                                                >
+                                                    <div className="d-flex justify-content-between small mb-1">
+                                                        <strong>{message.sender_name}</strong>
+                                                        <span>{moment(message.created_at).fromNow()}</span>
+                                                    </div>
+                                                    <p className="mb-0">{message.content}</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <form onSubmit={handleSendMessage} className="mt-3">
+                                <div className="input-group">
+                                    <textarea
+                                        className="form-control"
+                                        rows="2"
+                                        placeholder="Write your response..."
+                                        value={newMessage}
+                                        onChange={(e) => setNewMessage(e.target.value)}
+                                        required
+                                    />
+                                    <button type="submit" className="btn btn-primary">
+                                        <i className="fas fa-paper-plane"></i> Send
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    )}
+                </div>
+            </div>
+        </div>
+    );
 }
 
-export default QADetail
+export default TeacherQADetail;

@@ -29,6 +29,14 @@ import Dashboard from "./views/instructor/Dashboard";
 import Courses from "./views/instructor/Courses";
 import Review from "./views/instructor/Review";
 import Students from "./views/instructor/Students";
+import Earning from "./views/instructor/Earning";
+import Orders from "./views/instructor/Orders";
+import Coupons from "./views/instructor/Coupon";
+import TeacherNotification from "./views/instructor/TeacherNotification";
+import QA from "./views/instructor/QA";
+import Profile from "./views/instructor/Profile";
+import CourseCreate from "./views/instructor/CourseCreate";
+import CourseEdit from "./views/instructor/CourseEdit";
 
 function App() {
 
@@ -84,6 +92,15 @@ function App() {
                 <Route path="/instructor/courses/" element={<Courses />} />
                 <Route path="/instructor/reviews/" element={<Review />} />
                 <Route path="/instructor/students/" element={<Students />} />
+                <Route path="/instructor/earning/" element={<Earning />} />
+                <Route path="/instructor/orders/" element={<Orders />} />
+                <Route path="/instructor/coupons/" element={<Coupons />} />
+                <Route path="/instructor/teacherNotifications/" element={<TeacherNotification />} />
+                <Route path="/instructor/questions-answers/" element={<QA />} />
+                <Route path="/instructor/profile/" element={<Profile />} />
+                <Route path="/instructor/create-course/" element={<CourseCreate />} />
+                <Route path="/instructor/edit-course/:course_id/" element={<CourseEdit />} />
+
               </Route>
             </Routes>
           </MainWrapper>

@@ -1,44 +1,31 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
-
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
-
-import Sidebar from "./Partials/Sidebar";
-import Header from "./Partials/Header";
-import BaseHeader from "../partials/BaseHeader";
-import BaseFooter from "../partials/BaseFooter";
-
+import Badge from "react-bootstrap/Badge";
+import TBaseSidebar from '../partials/TBaseSidebar';
 import useAxios from "../../utils/useAxios";
-import Useta from "../plugin/UserData";
-import { teacherId } from "../../utils/constants";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
 function Coupon() {
   const [coupons, setCoupons] = useState([]);
   const [createCoupon, setCreateCoupon] = useState({ code: "", discount: 0 });
-  const [selectedCoupon, setSelectedCoupon] = useState([]);
-
-  const [show, setShow] = useState(false);
-  const [showAddCoupon, setShowAddCoupon] = useState(false);
-
-  const handleClose = () => setShow(false);
-  const handleShow = (coupon) => {
-    setShow(true);
-    setSelectedCoupon(coupon);
-  };
-
-  const handleAddCouponClose = () => setShowAddCoupon(false);
-  const handleAddCouponShow = () => setShowAddCoupon(true);
+  const [selectedCoupon, setSelectedCoupon] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const fetchCoupons = () => {
+    setLoading(true);
     useAxios()
       .get(`teacher/coupon-list/${UserData()?.teacher_id}/`)
       .then((res) => {
-        console.log(res.data);
         setCoupons(res.data);
-      });
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => {
@@ -54,19 +41,17 @@ function Coupon() {
 
   const handleCouponSubmit = (e) => {
     e.preventDefault();
-
     const formdata = new FormData();
-
     formdata.append("teacher", UserData()?.teacher_id);
     formdata.append("code", createCoupon.code);
     formdata.append("discount", createCoupon.discount);
 
     useAxios()
       .post(`teacher/coupon-list/${UserData()?.teacher_id}/`, formdata)
-      .then((res) => {
-        console.log(res.data);
+      .then(() => {
         fetchCoupons();
-        handleAddCouponClose();
+        setShowCreateModal(false);
+        setCreateCoupon({ code: "", discount: 0 });
         Toast().fire({
           icon: "success",
           title: "Coupon created successfully",
@@ -75,23 +60,22 @@ function Coupon() {
   };
 
   const handleDeleteCoupon = (couponId) => {
-    useAxios()
-      .delete(`teacher/coupon-detail/${UserData()?.teacher_id}/${couponId}/`)
-      .then((res) => {
-        console.log(res.data);
-        fetchCoupons();
-        Toast().fire({
-          icon: "success",
-          title: "Coupon deleted successfully",
+    if (window.confirm("Are you sure you want to delete this coupon?")) {
+      useAxios()
+        .delete(`teacher/coupon-detail/${UserData()?.teacher_id}/${couponId}/`)
+        .then(() => {
+          fetchCoupons();
+          Toast().fire({
+            icon: "success",
+            title: "Coupon deleted successfully",
+          });
         });
-      });
+    }
   };
 
   const handleCouponUpdateSubmit = (e) => {
     e.preventDefault();
-
     const formdata = new FormData();
-
     formdata.append("teacher", UserData()?.teacher_id);
     formdata.append("code", createCoupon.code);
     formdata.append("discount", createCoupon.discount);
@@ -101,10 +85,9 @@ function Coupon() {
         `teacher/coupon-detail/${UserData()?.teacher_id}/${selectedCoupon.id}/`,
         formdata
       )
-      .then((res) => {
-        console.log(res.data);
+      .then(() => {
         fetchCoupons();
-        handleClose();
+        setShowEditModal(false);
         Toast().fire({
           icon: "success",
           title: "Coupon updated successfully",
@@ -112,190 +95,204 @@ function Coupon() {
       });
   };
 
+  const openEditModal = (coupon) => {
+    setSelectedCoupon(coupon);
+    setCreateCoupon({
+      code: coupon.code,
+      discount: coupon.discount
+    });
+    setShowEditModal(true);
+  };
+
   return (
-    <>
-      <BaseHeader />
+    <div className="d-flex">
+      <TBaseSidebar
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
+        user={UserData()}
+      />
 
-      <section className="pt-5 pb-5">
-        <div className="container">
-          {/* Header Here */}
-          <Header />
-          <div className="row mt-0 mt-md-4">
-            {/* Sidebar Here */}
-            <Sidebar />
-            <div className="col-lg-9 col-md-8 col-12">
-              {/* Card */}
-              <div className="card mb-4">
-                {/* Card header */}
-                <div className="card-header d-lg-flex align-items-center justify-content-between">
-                  <div className="mb-3 mb-lg-0">
-                    <h3 className="mb-0">Coupons</h3>
-                    <span>Manage all your coupons from here</span>
-                  </div>
-                  <button
-                    className="btn btn-primary"
-                    onClick={handleAddCouponShow}
-                  >
-                    Add Coupon
-                  </button>
-                </div>
-                {/* Card body */}
-                <div className="card-body">
-                  {/* List group */}
-                  <ul className="list-group list-group-flush">
-                    {/* List group item */}
-                    {coupons?.map((c, index) => (
-                      <li className="list-group-item p-4 shadow rounded-3 mb-3">
-                        <div className="d-flex">
-                          <div className="ms-3 mt-2">
-                            <div className="d-flex align-items-center justify-content-between">
-                              <div>
-                                <h4 className="mb-0">{c.code}</h4>
-                                <span>{c.used_by} Student</span>
-                              </div>
-                            </div>
-                            <div className="mt-2">
-                              <p className="mt-2">
-                                <span className="me-2 fw-bold">
-                                  Discount:{" "}
-                                  <span className="fw-light">
-                                    {c.discount}% Discount
-                                  </span>
-                                </span>
-                              </p>
-                              <p className="mt-1">
-                                <span className="me-2 fw-bold">
-                                  Date Created:{" "}
-                                  <span className="fw-light">
-                                    {moment(c.date).format("DD MMM, YYYY")}
-                                  </span>
-                                </span>
-                              </p>
-                              <p>
-                                <button
-                                  class="btn btn-outline-secondary"
-                                  type="button"
-                                  onClick={() => handleShow(c)}
-                                >
-                                  Update Coupon
-                                </button>
+      <div className="main-content flex-grow-1 p-4">
+        {/* Header */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 className="mb-1">Coupon Management</h2>
+            <p className="text-muted mb-0">Create and manage discount coupons for your courses</p>
+          </div>
+          <button
+            className="btn btn-primary d-flex align-items-center"
+            onClick={() => setShowCreateModal(true)}
+          >
+            <i className="fas fa-plus me-2"></i> New Coupon
+          </button>
+        </div>
 
-                                <button
-                                  class="btn btn-danger ms-2"
-                                  type="button"
-                                  onClick={() => handleDeleteCoupon(c.id)}
-                                >
-                                  <i className="fas fa-trash"></i>
-                                </button>
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+        {/* Coupons List */}
+        <div className="card shadow-sm">
+          <div className="card-body">
+            {loading ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
                 </div>
               </div>
-            </div>
+            ) : coupons.length === 0 ? (
+              <div className="text-center py-5">
+                <i className="fas fa-ticket-alt fa-3x text-muted mb-3"></i>
+                <h5>No coupons created yet</h5>
+                <p className="text-muted">Create your first coupon to offer discounts</p>
+                <button
+                  className="btn btn-primary"
+                  onClick={() => setShowCreateModal(true)}
+                >
+                  Create Coupon
+                </button>
+              </div>
+            ) : (
+              <div className="row g-4">
+                {coupons.map((coupon) => (
+                  <div className="col-md-6 col-lg-4" key={coupon.id}>
+                    <div className="card h-100 border-0 shadow-sm">
+                      <div className="card-body">
+                        <div className="d-flex justify-content-between align-items-start mb-3">
+                          <Badge bg="success" className="fs-6">
+                            {coupon.discount}% OFF
+                          </Badge>
+                          <span className="text-muted small">
+                            {moment(coupon.date).format("MMM D, YYYY")}
+                          </span>
+                        </div>
+                        <h4 className="mb-3">
+                          <code className="fs-3">{coupon.code}</code>
+                        </h4>
+                        <div className="d-flex align-items-center mb-3">
+                          <i className="fas fa-users me-2 text-muted"></i>
+                          <span className="small">Used by {coupon.used_by} students</span>
+                        </div>
+                      </div>
+                      <div className="card-footer bg-transparent border-top-0 d-flex justify-content-end">
+                        <button
+                          className="btn btn-sm btn-outline-primary me-2"
+                          onClick={() => openEditModal(coupon)}
+                        >
+                          <i className="fas fa-edit me-1"></i> Edit
+                        </button>
+                        <button
+                          className="btn btn-sm btn-outline-danger"
+                          onClick={() => handleDeleteCoupon(coupon.id)}
+                        >
+                          <i className="fas fa-trash-alt me-1"></i> Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </section>
+      </div>
 
-      <Modal show={show} onHide={handleClose}>
+      {/* Create Coupon Modal */}
+      <Modal show={showCreateModal} onHide={() => setShowCreateModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>
-            Update Coupon -{" "}
-            <span className="fw-bold">{selectedCoupon.code}</span>
+            <i className="fas fa-ticket-alt me-2 text-primary"></i>
+            Create New Coupon
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          <form onSubmit={handleCouponSubmit}>
+            <div className="mb-3">
+              <label className="form-label">Coupon Code</label>
+              <input
+                type="text"
+                className="form-control"
+                placeholder="e.g. SUMMER20"
+                name="code"
+                value={createCoupon.code}
+                onChange={handleCreateCouponChange}
+                required
+              />
+            </div>
+            <div className="mb-4">
+              <label className="form-label">Discount Percentage</label>
+              <div className="input-group">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  className="form-control"
+                  placeholder="10"
+                  name="discount"
+                  value={createCoupon.discount}
+                  onChange={handleCreateCouponChange}
+                  required
+                />
+                <span className="input-group-text">%</span>
+              </div>
+            </div>
+            <div className="d-flex justify-content-end">
+              <Button variant="outline-secondary" className="me-2" onClick={() => setShowCreateModal(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                <i className="fas fa-save me-1"></i> Create Coupon
+              </Button>
+            </div>
+          </form>
+        </Modal.Body>
+      </Modal>
+
+      {/* Edit Coupon Modal */}
+      <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            <i className="fas fa-edit me-2 text-primary"></i>
+            Edit Coupon
           </Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <form onSubmit={handleCouponUpdateSubmit}>
-            <div class="mb-3">
-              <label for="exampleInputEmail1" class="form-label">
-                Code
-              </label>
+            <div className="mb-3">
+              <label className="form-label">Coupon Code</label>
               <input
                 type="text"
-                placeholder="Code"
-                defaultValue={selectedCoupon.code}
                 className="form-control"
                 name="code"
-                onChange={handleCreateCouponChange}
-              />
-              <label for="exampleInputEmail1" class="form-label mt-3">
-                Discount
-              </label>
-              <input
-                type="text"
-                placeholder="Discount"
-                defaultValue={selectedCoupon.discount}
-                className="form-control"
-                name="discount"
-                onChange={handleCreateCouponChange}
-                id=""
-              />
-            </div>
-
-            <button type="submit" class="btn btn-primary">
-              Update Coupon <i className="fas fa-check-circle"> </i>
-            </button>
-
-            <Button className="ms-2" variant="secondary" onClick={handleClose}>
-              Close
-            </Button>
-          </form>
-        </Modal.Body>
-      </Modal>
-
-      <Modal show={showAddCoupon} onHide={handleAddCouponClose}>
-        <Modal.Header closeButton>
-          <Modal.Title>Create New Coupon</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <form onSubmit={handleCouponSubmit}>
-            <div class="mb-3">
-              <label for="exampleInputEmail1" class="form-label">
-                Code
-              </label>
-              <input
-                type="text"
-                placeholder="Code"
                 value={createCoupon.code}
-                className="form-control"
-                name="code"
                 onChange={handleCreateCouponChange}
-              />
-              <label for="exampleInputEmail1" class="form-label mt-3">
-                Discount
-              </label>
-              <input
-                type="text"
-                placeholder="Discount"
-                value={createCoupon.discount}
-                className="form-control"
-                name="discount"
-                onChange={handleCreateCouponChange}
-                id=""
+                required
               />
             </div>
-
-            <button type="submit" class="btn btn-primary">
-              Create Coupon <i className="fas fa-plus"> </i>
-            </button>
-
-            <Button
-              className="ms-2"
-              variant="secondary"
-              onClick={handleAddCouponClose}
-            >
-              Close
-            </Button>
+            <div className="mb-4">
+              <label className="form-label">Discount Percentage</label>
+              <div className="input-group">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  className="form-control"
+                  name="discount"
+                  value={createCoupon.discount}
+                  onChange={handleCreateCouponChange}
+                  required
+                />
+                <span className="input-group-text">%</span>
+              </div>
+            </div>
+            <div className="d-flex justify-content-end">
+              <Button variant="outline-secondary" className="me-2" onClick={() => setShowEditModal(false)}>
+                Cancel
+              </Button>
+              <Button variant="primary" type="submit">
+                <i className="fas fa-save me-1"></i> Save Changes
+              </Button>
+            </div>
           </form>
         </Modal.Body>
       </Modal>
-
-      <BaseFooter />
-    </>
+    </div>
   );
 }
 

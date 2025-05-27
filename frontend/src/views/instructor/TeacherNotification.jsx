@@ -1,129 +1,148 @@
 import { useState, useEffect } from "react";
 import moment from "moment";
-
 import Modal from "react-bootstrap/Modal";
 import Button from "react-bootstrap/Button";
+import Badge from "react-bootstrap/Badge";
 
-import Sidebar from "./Partials/Sidebar";
-import Header from "./Partials/Header";
-import BaseHeader from "../partials/BaseHeader";
-import BaseFooter from "../partials/BaseFooter";
-
+import BaseSidebar from "../partials/BaseSidebar";
 import useAxios from "../../utils/useAxios";
 import UserData from "../plugin/UserData";
 import Toast from "../plugin/Toast";
 
 function TeacherNotification() {
-  const [noti, setNoti] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
-  const fetchNoti = () => {
+  const fetchNotifications = () => {
+    setLoading(true);
     useAxios()
-      .get(`teacher/noti-list/${UserData()?.teacher_id}/`)
+      .get(`teacher/notice-list/${UserData()?.teacher_id}/`)
       .then((res) => {
-        setNoti(res.data);
-        console.log(res.data);
-      });
+        setNotifications(res.data);
+        setLoading(false);
+      })
+      .catch(() => setLoading(false));
   };
 
   useEffect(() => {
-    fetchNoti();
+    fetchNotifications();
   }, []);
 
   const handleMarkAsSeen = (notiId) => {
     const formdata = new FormData();
-
     formdata.append("teacher", UserData()?.teacher_id);
     formdata.append("pk", notiId);
     formdata.append("seen", true);
 
     useAxios()
-      .patch(
-        `teacher/noti-detail/${UserData()?.teacher_id}/${notiId}`,
-        formdata
-      )
-      .then((res) => {
-        console.log(res.data);
-        fetchNoti();
+      .patch(`teacher/notice-detail/${UserData()?.teacher_id}/${notiId}`, formdata)
+      .then(() => {
+        fetchNotifications();
         Toast().fire({
           icon: "success",
-          title: "Notication Seen",
+          title: "Notification marked as seen",
+        });
+      });
+  };
+
+  const markAllAsRead = () => {
+    useAxios()
+      .post(`teacher/mark-all-noti-seen/${UserData()?.teacher_id}/`)
+      .then(() => {
+        fetchNotifications();
+        Toast().fire({
+          icon: "success",
+          title: "All notifications marked as seen",
         });
       });
   };
 
   return (
-    <>
-      <BaseHeader />
+    <div className="d-flex">
+      <BaseSidebar
+        sidebarCollapsed={sidebarCollapsed}
+        setSidebarCollapsed={setSidebarCollapsed}
+        user={UserData()}
+      />
 
-      <section className="pt-5 pb-5">
-        <div className="container">
-          {/* Header Here */}
-          <Header />
-          <div className="row mt-0 mt-md-4">
-            {/* Sidebar Here */}
-            <Sidebar />
-            <div className="col-lg-9 col-md-8 col-12">
-              {/* Card */}
-              <div className="card mb-4">
-                {/* Card header */}
-                <div className="card-header d-lg-flex align-items-center justify-content-between">
-                  <div className="mb-3 mb-lg-0">
-                    <h3 className="mb-0">Notifications</h3>
-                    <span>Manage all your notifications from here</span>
-                  </div>
-                </div>
-                {/* Card body */}
-                <div className="card-body">
-                  {/* List group */}
-                  <ul className="list-group list-group-flush">
-                    {/* List group item */}
-                    {noti?.map((n, index) => (
-                      <li
-                        className="list-group-item p-4 shadow rounded-3 mb-3"
-                        key={index}
-                      >
-                        <div className="d-flex">
-                          <div className="ms-3 mt-2">
-                            <div className="d-flex align-items-center justify-content-between">
-                              <div>
-                                <h4 className="mb-0">{n.type}</h4>
-                              </div>
-                            </div>
-                            <div className="mt-2">
-                              <p className="mt-1">
-                                <span className="me-2 fw-bold">
-                                  Date:{" "}
-                                  <span className="fw-light">
-                                    {moment(n.date).format("DD MMM, YYYY")}
-                                  </span>
-                                </span>
-                              </p>
-                              <p>
-                                <button
-                                  class="btn btn-outline-secondary"
-                                  type="button"
-                                  onClick={() => handleMarkAsSeen(n.id)}
-                                >
-                                  Mark as Seen <i className="fas fa-check"></i>
-                                </button>
-                              </p>
-                            </div>
-                          </div>
-                        </div>
-                      </li>
-                    ))}
+      <div className="main-content flex-grow-1 p-4">
+        {/* Header */}
+        <div className="d-flex justify-content-between align-items-center mb-4">
+          <div>
+            <h2 className="mb-1">Notifications</h2>
+            <p className="text-muted mb-0">View and manage your notifications</p>
+          </div>
+          {notifications.length > 0 && (
+            <button
+              className="btn btn-outline-primary d-flex align-items-center"
+              onClick={markAllAsRead}
+            >
+              <i className="fas fa-check-double me-2"></i>
+              Mark All as Read
+            </button>
+          )}
+        </div>
 
-                    {noti?.length < 1 && <p>No notifications</p>}
-                  </ul>
+        {/* Notifications List */}
+        <div className="card shadow-sm">
+          <div className="card-body p-0">
+            {loading ? (
+              <div className="text-center py-5">
+                <div className="spinner-border text-primary" role="status">
+                  <span className="visually-hidden">Loading...</span>
                 </div>
               </div>
-            </div>
+            ) : notifications.length === 0 ? (
+              <div className="text-center py-5">
+                <i className="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                <h5>No notifications yet</h5>
+                <p className="text-muted">You'll see important updates here</p>
+              </div>
+            ) : (
+              <div className="list-group list-group-flush">
+                {notifications.map((notification, index) => (
+                  <div
+                    className={`list-group-item p-4 ${index !== notifications.length - 1 ? 'border-bottom' : ''}`}
+                    key={index}
+                  >
+                    <div className="d-flex align-items-start">
+                      <div className="flex-grow-1">
+                        <div className="d-flex justify-content-between align-items-center mb-2">
+                          <h5 className="mb-0">
+                            <Badge bg="info" className="me-2">
+                              {notification.type}
+                            </Badge>
+                            {notification.title || "Notification"}
+                          </h5>
+                          <small className="text-muted">
+                            {moment(notification.date).fromNow()}
+                          </small>
+                        </div>
+                        {notification.message && (
+                          <p className="mb-3">{notification.message}</p>
+                        )}
+                        <div className="d-flex justify-content-between align-items-center">
+                          <small className="text-muted">
+                            {moment(notification.date).format("MMMM Do YYYY, h:mm a")}
+                          </small>
+                          <button
+                            className="btn btn-sm btn-outline-success"
+                            onClick={() => handleMarkAsSeen(notification.id)}
+                          >
+                            <i className="fas fa-check me-1"></i> Mark as Seen
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
-      </section>
-
-      <BaseFooter />
-    </>
+      </div>
+    </div>
   );
 }
 
