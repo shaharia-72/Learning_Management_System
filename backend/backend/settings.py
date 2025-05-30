@@ -265,15 +265,40 @@ JAZZMIN_SETTINGS = {
 
 
 
+# EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+# EMAIL_HOST = "smtp.gmail.com"
+# EMAIL_PORT = 587
+# EMAIL_USE_TLS = True
+# EMAIL_HOST_USER = env("EMAIL_HOST_USER")
+# EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
+# DEFAULT_FROM_EMAIL = 'noreplay@gmail'
+# STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
+
+
+# FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
+# BACKEND_URL=env("BACKEND_URL")
+
+# Email Configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = "smtp.gmail.com"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = env("EMAIL_HOST_USER")
 EMAIL_HOST_PASSWORD = env("EMAIL_HOST_PASSWORD")
-DEFAULT_FROM_EMAIL = 'noreplay@gmail'
+DEFAULT_FROM_EMAIL = 'noreply@gmail.com'
+
+# Stripe Configuration
 STRIPE_SECRET_KEY = env("STRIPE_SECRET_KEY")
+STRIPE_PUBLISHABLE_KEY = env("STRIPE_PUBLISHABLE_KEY")
 
-
+# URLs
 FRONTEND_URL = env("FRONTEND_URL", default="http://localhost:5173")
-BACKEND_URL=env("BACKEND_URL")
+BACKEND_URL = env("BACKEND_URL", default="http://127.0.0.1:8000")
+
+# SSLCommerz Configuration
+SSLC_STORE_ID = env("SSLC_STORE_ID")
+SSLC_STORE_PASSWORD = env("SSLC_STORE_PASSWORD")
+SSLC_IS_SANDBOX = env("SSLC_IS_SANDBOX", cast=bool, default=True)
+
+# Django Secret Key
+SECRET_KEY = env("SECRET_KEY")

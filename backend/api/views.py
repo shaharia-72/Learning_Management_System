@@ -8,7 +8,7 @@ from django.template.loader import render_to_string
 from django.core.mail import EmailMultiAlternatives
 from django.conf import settings
 from django.utils.timezone import now
-
+from django.core.exceptions import ObjectDoesNotExist
 from api import serializer as api_serializer
 from api import models as api_models
 from userauths.models import User, Profile
@@ -287,44 +287,114 @@ class CourseCartStatisticsView(generics.RetrieveAPIView):
         return Response({"total_price": total_price, "total_tax_fee": total_tax_fee, "total": total}, status=status.HTTP_200_OK)
     
     
+# class CreateOrderView(generics.CreateAPIView):
+#     serializer_class = api_serializer.CartOrderSerializer
+#     permission_classes = [AllowAny]
+#     queryset = api_models.CartOrder.objects.all()
+    
+#     def create(self, request, *args, **kwargs):
+#         data = request.data
+#         required_fields = ['full_name', 'email', 'country', 'cart_id', 'user_id'] 
+        
+#         for field in required_fields:
+#             if field not in data:
+#                 raise ValidationError(f"{field} is required.")
+        
+#         first_name = data.get('full_name')
+#         email = data.get('email')
+#         country = data.get('country')
+#         cart_id = data.get('cart_id')
+#         user_id = data.get('user_id')
+        
+#         user = get_object_or_404(User, id = user_id) if user_id else None
+#         cart_items = api_models.Cart.objects.filter(cart_id = cart_id)
+        
+#         if not cart_items.exists():
+#             raise ValidationError("No cart items found.")
+        
+#         order = api_models.CartOrder.objects.create(
+#             full_name = full_name,
+#             email = email,
+#             country = country,
+#             student = user,
+#         )
+        
+#         total_price = Decimal("0.00")
+#         total_tax = Decimal("0.00")
+#         total_total = Decimal("0.00")
+        
+#         order_items = []
+        
+#         for c in cart_items:
+#             order_items.append(api_models.CartOrderItem(
+#                 order=order,
+#                 course=c.course,
+#                 price=c.price,
+#                 tax_fee=c.tax_fee,
+#                 total=c.total,
+#                 initial_total=c.total,
+#                 teacher=c.course.teacher
+#             ))
+            
+#             total_price += Decimal(c.price)
+#             total_tax += Decimal(c.tax_fee)
+#             total_total += Decimal(c.total)
+#             order.teachers.add(c.course.teacher)
+
+#         # Bulk create order items
+#         api_models.CartOrderItem.objects.bulk_create(order_items)
+
+#         # Update order totals
+#         order.sub_total = total_price
+#         order.tax_fee = total_tax
+#         order.initial_total = total_total
+#         order.total = total_total
+#         order.save()
+
+#         return Response({
+#             "message": "Order Created Successfully",
+#             "order_oid": order.oid
+#         }, status=status.HTTP_201_CREATED)
+
+
 class CreateOrderView(generics.CreateAPIView):
     serializer_class = api_serializer.CartOrderSerializer
     permission_classes = [AllowAny]
     queryset = api_models.CartOrder.objects.all()
-    
+   
     def create(self, request, *args, **kwargs):
         data = request.data
-        required_fields = ['first_name', 'email', 'country', 'cart_id', 'user_id'] 
-        
+        required_fields = ['full_name', 'email', 'country', 'cart_id', 'user_id']
+       
         for field in required_fields:
             if field not in data:
                 raise ValidationError(f"{field} is required.")
-        
-        first_name = data.get('first_name')
+       
+        full_name = data.get('full_name')  # Fixed: was 'first_name'
         email = data.get('email')
         country = data.get('country')
         cart_id = data.get('cart_id')
         user_id = data.get('user_id')
-        
-        user = get_object_or_404(User, id = user_id) if user_id else None
-        cart_items = api_models.Cart.objects.filter(cart_id = cart_id)
-        
+       
+        user = get_object_or_404(User, id=user_id) if user_id else None
+        cart_items = api_models.Cart.objects.filter(cart_id=cart_id)
+       
         if not cart_items.exists():
             raise ValidationError("No cart items found.")
-        
+       
         order = api_models.CartOrder.objects.create(
-            first_name = first_name,
-            email = email,
-            country = country,
-            student = user,
+            full_name=full_name,  # This was correct
+            email=email,
+            country=country,
+            student=user,
         )
-        
+       
         total_price = Decimal("0.00")
         total_tax = Decimal("0.00")
         total_total = Decimal("0.00")
-        
+       
         order_items = []
-        
+       
         for c in cart_items:
             order_items.append(api_models.CartOrderItem(
                 order=order,
@@ -335,26 +405,27 @@ class CreateOrderView(generics.CreateAPIView):
                 initial_total=c.total,
                 teacher=c.course.teacher
             ))
-            
+           
             total_price += Decimal(c.price)
             total_tax += Decimal(c.tax_fee)
             total_total += Decimal(c.total)
             order.teachers.add(c.course.teacher)
-
+            
         # Bulk create order items
         api_models.CartOrderItem.objects.bulk_create(order_items)
-
+        
         # Update order totals
         order.sub_total = total_price
         order.tax_fee = total_tax
         order.initial_total = total_total
         order.total = total_total
         order.save()
-
+        
         return Response({
             "message": "Order Created Successfully",
             "order_oid": order.oid
         }, status=status.HTTP_201_CREATED)
+ 
         
 class CheckOutOrderView(generics.RetrieveAPIView):
     serializer_class = api_serializer.CartOrderSerializer
@@ -439,50 +510,200 @@ class couponView(generics.CreateAPIView):
                     return Response({"message": "Coupon Already Applied", "icon": "warning"}, status=status.HTTP_200_OK)
         else:
             return Response({"message": "Coupon Not Found", "icon": "error"}, status=status.HTTP_404_NOT_FOUND)
-        
-class StripeCheckOutView(generics.CreateAPIView):
+  
+
+
+class CouponApplyView(generics.CreateAPIView):
+    serializer_class = api_serializer.CouponSerializer
+    permission_classes = [AllowAny]
+
+    def create(self, request, *args, **kwargs):
+        order_oid = request.data.get('order_oid')
+        coupon_code = request.data.get('coupon_code')
+
+        if not order_oid or not coupon_code:
+            return Response({
+                "message": "Order ID and Coupon Code are required.",
+                "icon": "error"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            order = api_models.CartOrder.objects.get(oid=order_oid)
+        except ObjectDoesNotExist:
+            return Response({
+                "message": "Order not found.",
+                "icon": "error"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        try:
+            coupon = api_models.Coupon.objects.get(code=coupon_code)
+        except ObjectDoesNotExist:
+            return Response({
+                "message": "Coupon not found.",
+                "icon": "error"
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        # Check if coupon is already used by the student for this order
+        order_items = api_models.CartOrderItem.objects.filter(order=order, teacher=coupon.teacher)
+        applied = False
+
+        for item in order_items:
+            if coupon in item.coupons.all():
+                continue  # Already applied to this item
+
+            discount = item.total * coupon.discount / 100
+            item.total -= discount
+            item.price -= discount
+            item.saved += discount
+            item.applied_coupon = True
+            item.coupons.add(coupon)
+            item.save()
+
+            # Apply discount to the order
+            order.total -= discount
+            order.sub_total -= discount
+            order.saved += discount
+            applied = True
+
+        if applied:
+            order.coupons.add(coupon)
+            order.save()
+            coupon.used_by.add(order.student)
+            return Response({
+                "message": "Coupon successfully applied.",
+                "icon": "success"
+            }, status=status.HTTP_201_CREATED)
+        else:
+            return Response({
+                "message": "Coupon already applied or not applicable.",
+                "icon": "warning"
+            }, status=status.HTTP_200_OK)      
+
+
+# class StripeCheckOutView(generics.CreateAPIView):
+#     serializer_class = api_serializer.CartOrderSerializer
+#     permission_classes = [AllowAny]
+
+#     def create(self, request, *args, **kwargs):
+#         order_oid = self.kwargs["order_oid"]  
+#         try:
+#             order = api_models.CartOrder.objects.get(oid=order_oid)
+#         except api_models.CartOrder.DoesNotExist:
+#             return Response({"message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+
+#         try:
+#             checkout_session = stripe.checkout.Session.create(
+#                 customer_email=order.email,
+#                 payment_method_types=['card'],
+#                 line_items=[{
+#                     'price_data': {
+#                         'currency': 'BDT',
+#                         'product_data': {
+#                             'name': order.first_name,
+#                         },
+#                         'unit_amount': int(order.total * 100),
+#                     },
+#                     'quantity': 1,
+#                 }],
+#                 mode='payment',
+#                 success_url=f"{settings.FRONTEND_URL}/payment-success/{order.oid}?session_id={{CHECKOUT_SESSION_ID}}",
+#                 cancel_url=f"{settings.FRONTEND_URL}/payment-failed"
+#             )
+#             print("check_out session ====> ",checkout_session)
+#             order.stripe_session_id = checkout_session.id
+#             order.save()
+
+#             return redirect(checkout_session.url)
+
+#         except stripe.error.StripeError as e:
+#             return Response({"message": f"Something went wrong. ERROR: {str(e)}"})
+
+
+######################################################? PAYMENT ?##################################################
+
+class StripeCheckoutView(generics.CreateAPIView):
     serializer_class = api_serializer.CartOrderSerializer
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
-        order_oid = self.kwargs["order_oid"]  
-        try:
-            order = api_models.CartOrder.objects.get(oid=order_oid)
-        except api_models.CartOrder.DoesNotExist:
-            return Response({"message": "Order not found"}, status=status.HTTP_404_NOT_FOUND)
+        
+        order_oid = self.kwargs['order_oid']
+        order = api_models.CartOrder.objects.get(oid=order_oid)
 
+        if not order:
+            return Response({"message": "Order Not Found"}, status=status.HTTP_404_NOT_FOUND)
+        
         try:
             checkout_session = stripe.checkout.Session.create(
-                customer_email=order.email,
+                customer_email = order.email,
                 payment_method_types=['card'],
-                line_items=[{
-                    'price_data': {
-                        'currency': 'BDT',
-                        'product_data': {
-                            'name': order.first_name,
+                line_items=[
+                    {
+                        'price_data': {
+                            'currency': 'usd',
+                            'product_data': {
+                                'name': order.full_name,
+                            },
+                            'unit_amount': int(order.total * 100)
                         },
-                        'unit_amount': int(order.total * 100),
-                    },
-                    'quantity': 1,
-                }],
+                        'quantity': 1
+                    }
+                ],
                 mode='payment',
-                success_url=f"{settings.FRONTEND_URL}/payment-success/{order.oid}?session_id={{CHECKOUT_SESSION_ID}}",
-                cancel_url=f"{settings.FRONTEND_URL}/payment-failed"
+                success_url=settings.FRONTEND_URL + '/payment-success/' + order.oid + '?session_id={CHECKOUT_SESSION_ID}',
+                cancel_url= settings.FRONTEND_URL + '/payment-failed/'
             )
-            print("check_out session ====> ",checkout_session)
+            print("checkout_session ====", checkout_session)
             order.stripe_session_id = checkout_session.id
-            order.save()
 
             return redirect(checkout_session.url)
-
         except stripe.error.StripeError as e:
-            return Response({"message": f"Something went wrong. ERROR: {str(e)}"})
+            return Response({"message": f"Something went wrong when trying to make payment. Error: {str(e)}"})
 
+class PaymentSuccessView(generics.CreateAPIView):
+    serializer_class = api_serializer.CartOrderSerializer
+    queryset = api_models.CartOrder.objects.all()
 
+    def create(self, request, *args, **kwargs):
+        order_oid = request.data['order_oid']
+        session_id = request.data['session_id']
+
+        order = api_models.CartOrder.objects.get(oid=order_oid)
+        order_items = api_models.CartOrderItem.objects.filter(order=order)
+
+        # Stripe payment success
+        if session_id != 'null':
+            session = stripe.checkout.Session.retrieve(session_id)
+            if session.payment_status == "paid":
+                if order.payment_status == "Processing":
+                    order.payment_status = "Paid"
+                    order.save()
+
+                    api_models.Notification.objects.create(user=order.student, order=order, type="Course Enrollment Completed")
+                    for o in order_items:
+                        api_models.Notification.objects.create(
+                            teacher=o.teacher,
+                            order=order,
+                            order_item=o,
+                            type="New Order",
+                        )
+                        api_models.EnrolledCourse.objects.create(
+                            course=o.course,
+                            user=order.student,
+                            teacher=o.teacher,
+                            order_item=o
+                        )
+                    return Response({"message": "Payment Successfull"})
+                else:
+                    return Response({"message": "Already Paid"})
+            else:
+                    return Response({"message": "Payment Failed"})
+ 
+
+######################################################! end !##################################################
 
 
 # Student API View all hare 
-
 class SearchCourseView(generics.ListAPIView):
     serializer_class = api_serializer.CourseSerializer
     permission_classes = [AllowAny]
@@ -1342,7 +1563,6 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import jwt
-from django.conf import settings
 
 class CourseCreateView(generics.CreateAPIView):
     queryset = api_models.Course.objects.all()

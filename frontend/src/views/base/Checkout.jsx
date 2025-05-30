@@ -1,356 +1,425 @@
-import React, { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
-
+import { motion } from "framer-motion";
 import BaseHeader from "../partials/BaseHeader";
 import BaseFooter from "../partials/BaseFooter";
 import apiInstance from "../../utils/axios";
-import CartId from "../plugin/CartId";
 import Toast from "../plugin/Toast";
-import { CartContext } from "../plugin/Context";
-import { userId } from "../../utils/constants";
 import { PAYPAL_CLIENT_ID } from "../../utils/constants";
 
 function Checkout() {
-  const [order, setOrder] = useState([]);
+  const [order, setOrder] = useState({});
   const [coupon, setCoupon] = useState("");
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("sslcommerz");
+  const [isLoading, setIsLoading] = useState(true);
 
   const param = useParams();
+  const navigate = useNavigate();
+
   const fetchOrder = async () => {
     try {
-      apiInstance.get(`order/checkout/${param.order_oid}/`).then((res) => {
-        setOrder(res.data);
-      });
+      setIsLoading(true);
+      const response = await apiInstance.get(`/order/course-Check-Out-order/${param.order_oid}/`);
+      setOrder(response.data);
     } catch (error) {
       console.log(error);
+      Toast().fire({
+        icon: "error",
+        title: "Failed to load order details",
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const navigate = useNavigate();
-
   const applyCoupon = async () => {
-    const formdata = new FormData();
-    formdata.append("order_oid", order?.oid);
-    formdata.append("coupon_code", coupon);
+    if (!coupon.trim()) {
+      Toast().fire({
+        icon: "error",
+        title: "Please enter a coupon code",
+      });
+      return;
+    }
 
     try {
-      await apiInstance.post(`order/coupon/`, formdata).then((res) => {
-        console.log(res.data);
-        fetchOrder();
-        Toast().fire({
-          icon: res.data.icon,
-          title: res.data.message,
-        });
+      const formdata = new FormData();
+      formdata.append("order_oid", order?.oid);
+      formdata.append("coupon_code", coupon);
+
+      const response = await apiInstance.post(`order/coupon/`, formdata);
+      Toast().fire({
+        icon: response.data.icon,
+        title: response.data.message,
       });
+      fetchOrder();
     } catch (error) {
-      if (error.response.data.includes("Coupon matching query does not exi")) {
-        Toast().fire({
-          icon: "error",
-          title: "Coupon does not exist",
-        });
+      Toast().fire({
+        icon: "error",
+        title: error.response?.data?.message || "Failed to apply coupon",
+      });
+    }
+  };
+
+  const processPayment = async (e) => {
+    e.preventDefault();
+    setPaymentLoading(true);
+
+    try {
+      if (paymentMethod === "stripe") {
+        // Stripe payment will submit the form
+        e.target.form.submit();
+      } else {
+        // For Bangladeshi payment methods
+        const response = await apiInstance.post(`/payment/${paymentMethod}-checkout/${order.oid}/`);
+        if (response.data?.redirect_url) {
+          window.location.href = response.data.redirect_url;
+        }
       }
+    } catch (error) {
+      setPaymentLoading(false);
+      Toast().fire({
+        icon: "error",
+        title: error.response?.data?.message || "Payment processing failed",
+      });
     }
   };
 
   useEffect(() => {
     fetchOrder();
-  }, []);
-
-  const initialOptions = {
-    clientId: PAYPAL_CLIENT_ID,
-    currency: "USD",
-    intent: "capture",
-  };
-
-  const payWithStripe = (event) => {
-    setPaymentLoading(true);
-    event.target.form.submit();
-  };
+  }, [param.order_oid]);
 
   return (
     <>
       <BaseHeader />
 
-      <section className="py-0">
+      {/* Hero Section */}
+      <section className="checkout-hero bg-primary-gradient py-5">
         <div className="container">
           <div className="row">
-            <div className="col-12">
-              <div className="bg-light p-4 text-center rounded-3">
-                <h1 className="m-0">Checkout</h1>
-                {/* Breadcrumb */}
-                <div className="d-flex justify-content-center">
-                  <nav aria-label="breadcrumb">
-                    <ol className="breadcrumb breadcrumb-dots mb-0">
-                      <li className="breadcrumb-item">
-                        <a href="#" className="text-decoration-none text-dark">
-                          Home
-                        </a>
-                      </li>
-                      <li className="breadcrumb-item">
-                        <a href="#" className="text-decoration-none text-dark">
-                          Courses
-                        </a>
-                      </li>
-                      <li className="breadcrumb-item">
-                        <a href="#" className="text-decoration-none text-dark">
-                          Cart
-                        </a>
-                      </li>
-                      <li
-                        className="breadcrumb-item active"
-                        aria-current="page"
-                      >
-                        Checkout
-                      </li>
-                    </ol>
-                  </nav>
-                </div>
-              </div>
+            <div className="col-12 text-center">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <h1 className="text-white fw-bold mb-3">Complete Your Purchase</h1>
+                <p className="lead text-white-80 mb-4">Review your order and select payment method</p>
+                <nav aria-label="breadcrumb" className="d-flex justify-content-center">
+                  <ol className="breadcrumb breadcrumb-light">
+                    <li className="breadcrumb-item"><Link to="/">Home</Link></li>
+                    <li className="breadcrumb-item"><Link to="/courses">Courses</Link></li>
+                    <li className="breadcrumb-item"><Link to="/cart">Cart</Link></li>
+                    <li className="breadcrumb-item active" aria-current="page">Checkout</li>
+                  </ol>
+                </nav>
+              </motion.div>
             </div>
           </div>
         </div>
       </section>
-      <section className="pt-5">
+
+      {/* Main Content */}
+      <section className="py-5 bg-light">
         <div className="container">
-          <div className="row g-4 g-sm-5">
-            <div className="col-xl-8 mb-4 mb-sm-0">
-              <div
-                className="alert alert-warning alert-dismissible d-flex justify-content-between align-items-center fade show py-2 pe-2"
-                role="alert"
+          <div className="row g-4">
+            {/* Order Details */}
+            <div className="col-lg-8">
+              <motion.div
+                className="card shadow-sm border-0 rounded-3 overflow-hidden mb-4"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.1 }}
               >
-                <div>
-                  <i className="bi bi-exclamation-octagon-fill me-2" />
-                  Review your courses before payment
+                <div className="card-header bg-white py-3 border-bottom">
+                  <h5 className="mb-0 d-flex align-items-center">
+                    <i className="fas fa-shopping-cart text-primary me-2"></i>
+                    Order Summary
+                  </h5>
                 </div>
 
-                <button
-                  type="button"
-                  className="btn btn-warning mb-0 text-primary-hover text-end"
-                  data-bs-dismiss="alert"
-                  aria-label="Close"
-                >
-                  <i className="bi bi-x-lg text-white" />
-                </button>
-              </div>
-
-              <div className="p-4 shadow rounded-3 mt-4">
-                <h5 className="mb-0 mb-3">Courses</h5>
-
-                <div className="table-responsive border-0 rounded-3">
-                  <table className="table align-middle p-4 mb-0">
-                    <tbody className="border-top-2">
-                      {order?.order_items?.map((o, index) => (
-                        <tr>
-                          <td>
-                            <div className="d-lg-flex align-items-center">
-                              <div className="w-100px w-md-80px mb-2 mb-md-0">
-                                <img
-                                  src={o.course.image}
-                                  style={{
-                                    width: "100px",
-                                    height: "70px",
-                                    objectFit: "cover",
-                                  }}
-                                  className="rounded"
-                                  alt=""
-                                />
-                              </div>
-                              <h6 className="mb-0 ms-lg-3 mt-2 mt-lg-0">
-                                <a
-                                  href="#"
-                                  className="text-decoration-none text-dark"
-                                >
-                                  {o.course.title}
-                                </a>
-                              </h6>
-                            </div>
-                          </td>
-                          <td className="text-center">
-                            <h5 className="text-success mb-0">${o.price}</h5>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <Link to={`/cart/`} className="btn btn-outline-secondary mt-3">
-                  Edit Cart <i className="fas fa-edit"></i>
-                </Link>
-              </div>
-
-              <div className="shadow p-4 rounded-3 mt-5">
-                <h5 className="mb-0">Personal Details</h5>
-                <form className="row g-3 mt-0">
-                  <div className="col-md-12 bg-light-input">
-                    <label htmlFor="yourName" className="form-label">
-                      Your name *
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control bg-light"
-                      id="yourName"
-                      placeholder="Name"
-                      readOnly
-                      value={order.first_name}
-                    />
-                  </div>
-                  <div className="col-md-12 bg-light-input">
-                    <label htmlFor="emailInput" className="form-label">
-                      Email address *
-                    </label>
-                    <input
-                      type="email"
-                      className="form-control bg-light"
-                      id="emailInput"
-                      placeholder="Email"
-                      readOnly
-                      value={order.email}
-                    />
-                  </div>
-
-                  {/* Country option */}
-                  <div className="col-md-12 bg-light-input">
-                    <label htmlFor="mobileNumber" className="form-label">
-                      Select country *
-                    </label>
-                    <input
-                      type="text"
-                      className="form-control bg-light"
-                      id="mobileNumber"
-                      placeholder="Country"
-                      readOnly
-                      value={order.country}
-                    />
-                  </div>
-                </form>
-                {/* Form END */}
-              </div>
-            </div>
-            <div className="col-xl-4">
-              <div className="row mb-0">
-                <div className="col-md-6 col-xl-12">
-                  <div className="shadow p-4 mb-4 rounded-3">
-                    <h4 className="mb-4">Order Summary</h4>
-                    <div className="mb-4">
-                      <div className="d-flex justify-content-between align-items-center">
-                        <span>Transaction ID</span>
-                        <p className="mb-0 h6 fw-light">DES23853</p>
+                <div className="card-body">
+                  {isLoading ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
                       </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="table-responsive">
+                        <table className="table table-borderless">
+                          <tbody>
+                            {order?.order_items?.map((item, index) => (
+                              <tr key={index}>
+                                <td width="80">
+                                  <img
+                                    src={item.course.image}
+                                    className="img-fluid rounded-2"
+                                    alt={item.course.title}
+                                    style={{ height: "60px", objectFit: "cover" }}
+                                  />
+                                </td>
+                                <td>
+                                  <h6 className="mb-0">{item.course.title}</h6>
+                                  <small className="text-muted">By {item.course.teacher.full_name}</small>
+                                </td>
+                                <td className="text-end">
+                                  <h6 className="mb-0 text-success">৳{item.price}</h6>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
 
-                    <div className="input-group mt-1">
-                      <input
-                        className="form-control form-control"
-                        placeholder="COUPON CODE"
-                        onChange={(e) => setCoupon(e.target.value)}
-                      />
-                      <button
-                        onClick={applyCoupon}
-                        type="button"
-                        className="btn btn-primary"
-                      >
-                        Apply
-                      </button>
-                    </div>
-
-                    <div className="p-3 shadow rounded-3 mt-3">
-                      <h4 className="mb-3">Cart Total</h4>
-                      <ul class="list-group mb-3">
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                          Sub Total
-                          <span>${order.sub_total}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                          Discount
-                          <span>${order.saved}</span>
-                        </li>
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                          Tax
-                          <span>${order.tax_fee}</span>
-                        </li>
-                        <li class="list-group-item d-flex fw-bold justify-content-between align-items-center">
-                          Total
-                          <span className="fw-bold">${order.total}</span>
-                        </li>
-                      </ul>
-                      <div className="d-grid">
-                        <form
-                          action={`http://127.0.0.1:8000/api/v1/payment/stripe-checkout/${order.oid}/`}
-                          className="w-100"
-                          method="POST"
-                        >
-                          {paymentLoading === true ? (
-                            <button
-                              type="submit"
-                              disabled
-                              className="btn btn-lg btn-success mt-2 w-100"
-                            >
-                              {" "}
-                              Processing{" "}
-                              <i className="fas fa-spinner f a-spin"></i>
-                            </button>
-                          ) : (
-                            <button
-                              type="submit"
-                              onClick={payWithStripe}
-                              className="btn btn-lg btn-success mt-2 w-100"
-                            >
-                              {" "}
-                              Pay With Stripe
-                            </button>
-                          )}
-                        </form>
-
-                        <PayPalScriptProvider options={initialOptions}>
-                          <PayPalButtons
-                            className="mt-3"
-                            createOrder={(data, actions) => {
-                              return actions.order.create({
-                                purchase_units: [
-                                  {
-                                    amount: {
-                                      currency_code: "USD",
-                                      value: order.total.toString(),
-                                    },
-                                  },
-                                ],
-                              });
-                            }}
-                            onApprove={(data, actions) => {
-                              return actions.order.capture().then((details) => {
-                                const name = details.payer.name.given_name;
-                                const status = details.status;
-                                const paypal_order_id = data.orderID;
-
-                                console.log(status);
-                                if (status === "COMPLETED") {
-                                  navigate(
-                                    `/payment-success/${order.oid}/?paypal_order_id=${paypal_order_id}`
-                                  );
-                                }
-                              });
-                            }}
+                      <div className="bg-light p-3 rounded-2 mt-3">
+                        <div className="input-group">
+                          <input
+                            type="text"
+                            className="form-control"
+                            placeholder="Enter coupon code"
+                            value={coupon}
+                            onChange={(e) => setCoupon(e.target.value)}
                           />
-                        </PayPalScriptProvider>
+                          <button
+                            className="btn btn-outline-primary"
+                            type="button"
+                            onClick={applyCoupon}
+                          >
+                            Apply
+                          </button>
+                        </div>
                       </div>
-                      <p className="small mb-0 mt-2 text-center">
-                        By proceeding to payment, you agree to these{" "}
-                        <a href="#">
-                          {" "}
-                          <strong>Terms of Service</strong>
-                        </a>
-                      </p>
+                    </>
+                  )}
+                </div>
+              </motion.div>
+
+              {/* Personal Information */}
+              <motion.div
+                className="card shadow-sm border-0 rounded-3 overflow-hidden"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <div className="card-header bg-white py-3 border-bottom">
+                  <h5 className="mb-0 d-flex align-items-center">
+                    <i className="fas fa-user-circle text-primary me-2"></i>
+                    Personal Information
+                  </h5>
+                </div>
+                <div className="card-body">
+                  <div className="row g-3">
+                    <div className="col-md-6">
+                      <label className="form-label">Name</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={order.full_name || ""}
+                        readOnly
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">Email</label>
+                      <input
+                        type="email"
+                        className="form-control"
+                        value={order.email || ""}
+                        readOnly
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">Phone</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={order.phone || ""}
+                        readOnly
+                      />
+                    </div>
+                    <div className="col-md-6">
+                      <label className="form-label">Country</label>
+                      <input
+                        type="text"
+                        className="form-control"
+                        value={order.country || ""}
+                        readOnly
+                      />
                     </div>
                   </div>
                 </div>
-              </div>
+              </motion.div>
+            </div>
+
+            {/* Payment Section */}
+            <div className="col-lg-4">
+              <motion.div
+                className="card shadow-sm border-0 rounded-3 sticky-top"
+                style={{ top: "20px" }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+              >
+                <div className="card-header bg-white py-3 border-bottom">
+                  <h5 className="mb-0 d-flex align-items-center">
+                    <i className="fas fa-credit-card text-primary me-2"></i>
+                    Payment Details
+                  </h5>
+                </div>
+                <div className="card-body">
+                  {isLoading ? (
+                    <div className="text-center py-4">
+                      <div className="spinner-border text-primary" role="status">
+                        <span className="visually-hidden">Loading...</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="bg-light p-3 rounded-2 mb-4">
+                        <div className="d-flex justify-content-between mb-2">
+                          <span>Subtotal:</span>
+                          <span className="fw-medium">৳{parseFloat(order.sub_total || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="d-flex justify-content-between mb-2">
+                          <span>Discount:</span>
+                          <span className="fw-medium text-danger">-৳{parseFloat(order.saved || 0).toFixed(2)}</span>
+                        </div>
+                        <div className="d-flex justify-content-between mb-2">
+                          <span>Tax:</span>
+                          <span className="fw-medium">৳{parseFloat(order.tax_fee || 0).toFixed(2)}</span>
+                        </div>
+                        <hr className="my-2" />
+                        <div className="d-flex justify-content-between fw-bold fs-5">
+                          <span>Total:</span>
+                          <span className="text-success">৳{parseFloat(order.total || 0).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+
+                      <div className="mb-4">
+                        <h6 className="mb-3">Select Payment Method</h6>
+                        <div className="btn-group-vertical w-100" role="group">
+                          <input
+                            type="radio"
+                            className="btn-check"
+                            name="paymentMethod"
+                            id="sslcommerz"
+                            autoComplete="off"
+                            checked={paymentMethod === "sslcommerz"}
+                            onChange={() => setPaymentMethod("sslcommerz")}
+                          />
+                          <label className="btn btn-outline-primary text-start d-flex align-items-center" htmlFor="sslcommerz">
+                            <img src="/images/sslcommerz.png" alt="SSLCOMMERZ" height="24" className="me-2" />
+                            SSLCOMMERZ (Cards, Mobile Banking)
+                          </label>
+
+                          <input
+                            type="radio"
+                            className="btn-check"
+                            name="paymentMethod"
+                            id="bkash"
+                            autoComplete="off"
+                            checked={paymentMethod === "bkash"}
+                            onChange={() => setPaymentMethod("bkash")}
+                          />
+                          <label className="btn btn-outline-primary text-start d-flex align-items-center" htmlFor="bkash">
+                            <img src="/images/bkash.png" alt="bKash" height="24" className="me-2" />
+                            bKash
+                          </label>
+
+                          <input
+                            type="radio"
+                            className="btn-check"
+                            name="paymentMethod"
+                            id="nagad"
+                            autoComplete="off"
+                            checked={paymentMethod === "nagad"}
+                            onChange={() => setPaymentMethod("nagad")}
+                          />
+                          <label className="btn btn-outline-primary text-start d-flex align-items-center" htmlFor="nagad">
+                            <img src="/images/nagad.png" alt="Nagad" height="24" className="me-2" />
+                            Nagad
+                          </label>
+
+                          <input
+                            type="radio"
+                            className="btn-check"
+                            name="paymentMethod"
+                            id="stripe"
+                            autoComplete="off"
+                            checked={paymentMethod === "stripe"}
+                            onChange={() => setPaymentMethod("stripe")}
+                          />
+                          <label className="btn btn-outline-primary text-start d-flex align-items-center" htmlFor="stripe">
+                            <img src="/images/stripe.png" alt="Stripe" height="24" className="me-2" />
+                            Stripe (International Cards)
+                          </label>
+                        </div>
+                      </div>
+
+                      <form action={`http://127.0.0.1:8000/api/payment/stripe-checkout/${order.oid}/`} method="POST">
+                        <button
+                          className="btn btn-primary w-100 py-3"
+                          onClick={processPayment}
+                          disabled={paymentLoading}
+                        >
+                          {paymentLoading ? (
+                            <>
+                              <span className="spinner-border spinner-border-sm me-2"></span>
+                              Processing Payment...
+                            </>
+                          ) : (
+                            <>
+                              <i className="fas fa-lock me-2"></i>
+                              ৳{parseFloat(order.total || 0).toFixed(2)}
+
+                            </>
+                          )}
+                        </button>
+                      </form>
+
+                      <div className="text-center small text-muted mt-3">
+                        <i className="fas fa-shield-alt text-success me-1"></i>
+                        Secure SSL Encrypted Payment
+                      </div>
+
+                      <div className="mt-4 bg-success bg-opacity-10 p-3 rounded-2">
+                        <div className="d-flex align-items-center text-success">
+                          <i className="fas fa-check-circle me-2"></i>
+                          <small>30-day money-back guarantee</small>
+                        </div>
+                      </div>
+                    </>
+                  )}
+                </div>
+              </motion.div>
             </div>
           </div>
         </div>
       </section>
 
       <BaseFooter />
+
+      <style jsx>{`
+        .checkout-hero {
+          background: linear-gradient(135deg, #4b6cb7 0%, #182848 100%);
+        }
+        .breadcrumb-light .breadcrumb-item + .breadcrumb-item::before {
+          color: rgba(255,255,255,0.5);
+        }
+        .breadcrumb-light .breadcrumb-item a {
+          color: rgba(255,255,255,0.8);
+          text-decoration: none;
+        }
+        .breadcrumb-light .breadcrumb-item.active {
+          color: white;
+        }
+        .btn-check:checked + .btn {
+          background-color: var(--bs-primary);
+          color: white;
+        }
+      `}</style>
     </>
   );
 }

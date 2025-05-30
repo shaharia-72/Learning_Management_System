@@ -22,10 +22,11 @@ urlpatterns = [
     path("cart/course-Cart-Statistic/<cart_id>/", api_views.CourseCartStatisticsView.as_view()),
     path("order/course-create-order/", api_views.CreateOrderView.as_view()),
     path("order/course-Check-Out-order/<oid>/", api_views.CheckOutOrderView.as_view()),
+    path("order/coupon/", api_views.CouponApplyView.as_view()),
     path("coupon/course-coupon-apply/", api_views.couponView.as_view()),
 
     # payment
-    path("payment/strip-checkout/<str:order_oid>/", api_views.StripeCheckOutView.as_view(), name='stripe-checkout'),
+    # path("payment/strip-checkout/<str:order_oid>/", api_views.StripeCheckOutView.as_view(), name='stripe-checkout'),
     
     # Student API Endpoints
     path("student/summary/<user_id>/", api_views.StudentSummaryView.as_view()),
@@ -60,6 +61,11 @@ urlpatterns = [
     path("teacher/course-detail/<slug>/", api_views.TeachCourseDetailView.as_view()),
     path("teacher/course/variant-delete/<variant_id>/<teacher_id>/<course_id>/", api_views.CourseVariantDeleteView.as_view()),
     path("teacher/course/variant-item-delete/<variant_id>/<variant_item_id>/<teacher_id>/<course_id>/", api_views.CourseVariantItemDeleteVIew.as_view()),
+
+
+    # payment
+    path("payment/stripe-checkout/<str:order_oid>/", api_views.StripeCheckoutView.as_view()),
+    path("payment/payment-sucess/", api_views.PaymentSuccessView.as_view()),
 
 ]
 

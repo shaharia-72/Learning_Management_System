@@ -37,6 +37,7 @@ import QA from "./views/instructor/QA";
 import Profile from "./views/instructor/Profile";
 import CourseCreate from "./views/instructor/CourseCreate";
 import CourseEdit from "./views/instructor/CourseEdit";
+import PaymentSuccess from "./views/base/PaymentSuccess"
 
 import Cart from "./views/base/Cart";
 import Checkout from "./views/base/Checkout";
@@ -110,6 +111,7 @@ function App() {
                 <Route path="/instructor/profile/" element={<Profile />} />
                 <Route path="/instructor/create-course/" element={<CourseCreate />} />
                 <Route path="/instructor/edit-course/:course_id/" element={<CourseEdit />} />
+                <Route path="/payment-success/:order_oid" element={<PaymentSuccess />} />
 
               </Route>
             </Routes>
